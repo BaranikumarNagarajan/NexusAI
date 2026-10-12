@@ -288,4 +288,4 @@ Run from `backend/` with the virtual environment active.
 *Indian Grocery Tax Invoice Image Dataset* by surajitsadhukhan (CC BY 4.0).
 All demo companies and figures in `backend/samples/` are fictional.
 
-**License:** [MIT](LICENSE) © 2026 Barani Kumar Nagarajan
+**License:** [MIT](LICENSE) © 2026 Baranikumar Nagarajan

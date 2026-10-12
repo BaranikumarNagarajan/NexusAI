@@ -140,12 +140,11 @@ docker run --rm -p 7860:7860 -e ACCESS_PASSWORD=choose-one -e SUPABASE_URL=... -
 | Step | What happens |
 |---|---|
 | **git push** | GitHub Actions checks the code, builds the image and sends real reviews through Agent A → Agent B over A2A inside it |
-| **Render** | Redeploys the web service automatically once the checks pass |
-| **Hugging Face Space** | The workflow pushes the app to the Space, which rebuilds it |
+| **Render** | Redeploys the web service automatically once the checks pass — live at **<https://nexusai-wnn7.onrender.com>** |
 
 Public deployments are protected by an **access password** and **rate limits**, so the AI, Kaggle
 and Supabase quotas can't be used up — share the link and the password with your team.
-Step-by-step setup for Render and Hugging Face: **[docs/8 · Deployment](docs/8-deployment.md)**.
+Step-by-step setup: **[docs/8 · Deployment](docs/8-deployment.md)**.
 
 ---
 
@@ -274,7 +273,7 @@ Run from `backend/` with the virtual environment active.
 | Phase 4 — LLM explanations; rules keep the arithmetic | ✅ | [docs/5](docs/5-ai-reasoning.md) — Ollama Cloud by default, Hugging Face supported |
 | Phase 5 — RAG over procurement policies | ⏳ optional | not needed so far |
 | Phase 6 — professional HTML/CSS/JS dashboard | ✅ | [docs/7](docs/7-web-app.md) |
-| Phase 7 — deployment | ✅ | Docker image, GitHub Actions CI/CD, Render / Hugging Face Spaces — [docs/8](docs/8-deployment.md) |
+| Phase 7 — deployment | ✅ | Docker image, GitHub Actions CI/CD, live on Render — [docs/8](docs/8-deployment.md) |
 | Security: no credentials in code or logs, validated input, timeouts | ✅ | `.env` only; access password, rate limits, token masking in logs |
 | Automated tests | ✅ run, then removed | 150 passed; kept out of the repo by choice — [docs/9](docs/9-testing-and-verification.md) |
 
@@ -291,7 +290,7 @@ Run from `backend/` with the virtual environment active.
 | 5 | [AI reasoning](docs/5-ai-reasoning.md) | Guardrails, fact check, providers |
 | 6 | [API reference](docs/6-api-reference.md) | Every endpoint and how the API protects the system |
 | 7 | [Web app](docs/7-web-app.md) | Pages, report tabs, code layout |
-| 8 | [Deployment](docs/8-deployment.md) | Docker, CI/CD, Render, Hugging Face Spaces, sharing with the team |
+| 8 | [Deployment](docs/8-deployment.md) | Docker, CI/CD, Render, sharing with the team |
 | 9 | [Testing and verification](docs/9-testing-and-verification.md) | What was tested, results, known limitations |
 
 ---

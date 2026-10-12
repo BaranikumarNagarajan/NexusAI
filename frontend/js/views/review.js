@@ -207,7 +207,7 @@ async function handleFile(doc, file) {
 
   const scan = /^image\//.test(file.type) || /\.(png|jpe?g|tiff?)$/i.test(file.name || "");
   setZone(doc, "busy", scan
-    ? `Reading ${file.name} with OCR… this takes a few seconds here, and up to ~30 s on the free online server.`
+    ? `Reading ${file.name} with OCR… a few seconds locally; on the free online server ~20–30 s for a scan, up to 2–3 min for a phone photo.`
     : `Reading ${file.name}… (scanned PDFs use OCR and take longer)`);
   const form = new FormData();
   form.append("file", file, file.name);

@@ -48,8 +48,9 @@ OCR (please check), **red** not found, **purple** edited by you.
 ## OCR for scans and photos (Tesseract)
 
 - **When:** scanned PDFs (no text layer) and PNG / JPEG / TIFF images. Text PDFs are read directly.
-- **Pipeline:** turn the page upright with Tesseract's orientation detection (phone photos are
-  often sideways) → grayscale → upscale to 2600 px → auto-contrast → OCR with word positions.
+- **Pipeline:** grayscale → upscale to 2600 px → auto-contrast → OCR with word positions. If the
+  page reads as noise (mean word confidence below 60 — typical of a sideways phone photo), it is
+  turned upright with Tesseract's orientation detection and read again; the better reading wins.
 - **Setup:** Tesseract on `PATH`, or `TESSERACT_CMD` in `backend/.env`. In Docker it is
   installed with `apt-get install tesseract-ocr`.
 - **Accuracy:** 195/196 fields on the synthetic set as images; **24/24** invoice numbers and

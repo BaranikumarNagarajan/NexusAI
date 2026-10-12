@@ -1,23 +1,21 @@
-# 8 · Deployment: Docker, CI/CD, Render and Hugging Face Spaces
+# 8 · Deployment: Docker, CI/CD and Render
 
 [← 7 · Web app](7-web-app.md) · [README](../README.md) · Next: [9 · Testing](9-testing-and-verification.md)
 
 NexusAI ships as **one Docker image** that runs Agent B, Agent A, the API and the web app, with
-Tesseract OCR inside. The same image runs on Render, Hugging Face Spaces, Railway or Fly.io.
-One URL serves everything, so no separate frontend host is needed.
+Tesseract OCR inside. It is deployed on **Render**: **<https://nexusai-wnn7.onrender.com>**
+(sign-in required). One URL serves everything, so no separate frontend host is needed. The same
+image also runs on Hugging Face Spaces, Railway or Fly.io.
 
 ```mermaid
 flowchart LR
     Dev[git push] --> GH[GitHub repo]
     GH --> CI[GitHub Actions<br/>1 check code<br/>2 build + smoke-test image]
     CI -- checks pass --> R[Render<br/>Docker web service]
-    CI -- checks pass --> HF[Hugging Face Space<br/>Docker]
     R --> S[(Supabase)]
     R --> O[Ollama Cloud]
     R --> K[Kaggle API]
-    HF --> S
-    HF --> O
-    HF --> K
+    T[Team: link + password] --> R
 ```
 
 ## The container
@@ -27,8 +25,12 @@ flowchart LR
 | [`Dockerfile`](../Dockerfile) | Python 3.11 slim + `tesseract-ocr`; installs `requirements.txt`; runs `backend/run.py --no-browser` as a normal user (uid 1000) |
 | [`.dockerignore`](../.dockerignore) | Keeps `.env`, `.venv`, `.git`, docs and downloaded Kaggle images out of the image |
 
-- **Port:** the API listens on `$PORT` — Render sets it, Hugging Face uses `7860` (the default).
+- **Port:** the API listens on `$PORT` — Render sets it; `7860` otherwise.
 - **Size / memory:** image ~530 MB; ~220 MB RAM idle, ~250 MB during OCR (fits free 512 MB plans).
+- **OCR speed on small CPUs:** Render's free plan has a fraction of one CPU. Tesseract runs with
+  one thread (`OMP_THREAD_LIMIT=1`, ~4× faster there: 63 s → 17 s a page), and orientation
+  detection only runs when a page reads as noise (sideways photos). Expect ~15–30 s per scanned
+  invoice online (sideways phone photos up to 2–3 minutes), a few seconds locally.
 - **Stops cleanly** on `docker stop` (all three services shut down in order).
 
 Try it locally with Docker Desktop:
@@ -62,11 +64,10 @@ never in GitHub.
 2. **Build and smoke-test the container** — builds the image, starts it with a test password and no
    secrets, checks the password is enforced, sends four scenarios through **Agent A → Agent B over
    A2A** (`MATCH`, `DISCREPANCY_FOUND`, `NEEDS_REVIEW`, `INVALID_REQUEST`) and extracts a PDF.
-3. **Deploy to Hugging Face** — only on `main`, and only when the Space is configured (below).
 
-A failed check stops the deployment, so a broken commit never goes live.
+Render waits for both checks; a failed check stops the deployment, so a broken commit never goes live.
 
-## Option 1 · Render (free web service)
+## Render setup (free web service)
 
 1. Render dashboard → **New → Web Service** → connect the GitHub repo `NexusAI`.
 2. **Language:** Docker · **Branch:** `main` · **Instance type:** Free.
@@ -78,21 +79,11 @@ A failed check stops the deployment, so a broken commit never goes live.
 Every push to `main` then redeploys automatically once CI is green. The free plan sleeps after
 ~15 minutes idle; the first visit afterwards takes ~50 s to wake up.
 
-## Option 2 · Hugging Face Space (free, 16 GB RAM)
+## Other hosts
 
-1. huggingface.co → **New Space** → name `NexusAI`, **SDK: Docker** (blank template), public or private.
-2. Space → **Settings → Variables and secrets:** add the variables from the table above as *secrets*.
-3. huggingface.co → **Settings → Access Tokens:** create a token with **write** access.
-4. GitHub repo → **Settings → Secrets and variables → Actions:**
-   - secret `HF_TOKEN` = that token
-   - variable `HF_SPACE` = `BaranikumarNagarajan/NexusAI`
-5. Push to `main` (or run the workflow by hand). The **Deploy to Hugging Face Space** job pushes
-   the app; the Space builds it and serves it at
-   `https://baranikumarnagarajan-nexusai.hf.space`.
-
-The job adds the Space settings (`sdk: docker`, `app_port: 7860`) to the README it pushes and
-stores PDFs and images with Git LFS, as the Hub requires. A free Space sleeps after 48 hours
-without visitors.
+The same image runs elsewhere without code changes — for example a **Hugging Face Docker Space**
+(free, more memory; set `app_port: 7860` in the Space README and add the variables above as Space
+secrets), Railway or Fly.io.
 
 ## Sharing with your team
 

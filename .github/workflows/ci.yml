@@ -1,8 +1,8 @@
 # CI/CD for NexusAI
 #   1. check   - Python compiles and lints, JavaScript parses
 #   2. docker  - build the image, run it, and send real reviews through Agent A -> Agent B over A2A
-#   3. deploy  - push to a Hugging Face Space (only when HF_SPACE / HF_TOKEN are configured)
-# Render deploys itself from GitHub; set its Auto-Deploy to "After CI checks pass".
+# Deployment: Render redeploys itself from GitHub once these checks pass
+# (Render > Settings > Auto-Deploy: "After CI checks pass").
 name: CI
 
 on:
@@ -78,31 +78,3 @@ jobs:
       - name: Container logs
         if: always()
         run: docker logs nexusai 2>&1 | tail -60
-
-  deploy-hf:
-    name: Deploy to Hugging Face Space
-    needs: docker
-    # Set repository variable HF_SPACE (e.g. BaranikumarNagarajan/NexusAI) and secret HF_TOKEN to enable.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.HF_SPACE != ''
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Push the app to the Space
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_SPACE: ${{ vars.HF_SPACE }}
-        run: |
-          set -e
-          rm -rf .git .github
-          # A Space reads its settings from the README's front matter.
-          {
-            printf -- '---\ntitle: NexusAI\nemoji: "🧾"\ncolorFrom: indigo\ncolorTo: purple\nsdk: docker\napp_port: 7860\n'
-            printf -- 'pinned: false\nlicense: mit\nshort_description: A2A-powered invoice verification\n---\n\n'
-            cat README.md
-          } > README.space && mv README.space README.md
-          git init -q -b main
-          git lfs install --local
-          git lfs track "*.pdf" "*.png" "*.gif" "*.jpg"   # the Hub stores binary files with LFS
-          git add -A
-          git -c user.name="github-actions" -c user.email="actions@github.com" commit -q -m "Deploy ${GITHUB_SHA::7}"
-          git push --force "https://user:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}" main

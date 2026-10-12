@@ -205,7 +205,10 @@ async function handleFile(doc, file) {
   if (!okType) { setZone(doc, "error", "Please choose a PDF, PNG, JPEG or TIFF file."); return; }
   if (file.size > MAX_BYTES) { setZone(doc, "error", "The file is larger than 5 MB."); return; }
 
-  setZone(doc, "busy", `Reading ${file.name}… (scanned files use OCR and take a few seconds)`);
+  const scan = /^image\//.test(file.type) || /\.(png|jpe?g|tiff?)$/i.test(file.name || "");
+  setZone(doc, "busy", scan
+    ? `Reading ${file.name} with OCR… this takes a few seconds here, and up to ~30 s on the free online server.`
+    : `Reading ${file.name}… (scanned PDFs use OCR and take longer)`);
   const form = new FormData();
   form.append("file", file, file.name);
   form.append("expected_type", doc);
@@ -406,6 +409,8 @@ async function loadSampleDocs() {
     if (!tab) return;
     $$("#source-tabs button").forEach((b) => b.classList.toggle("active", b === tab));
     $$(".source-pane").forEach((pane) => { pane.hidden = pane.dataset.pane !== tab.dataset.source; });
+    // The online server starts with an empty disk after a restart: fetch a set the first time the tab opens.
+    if (tab.dataset.source === "kaggle" && !kaggleFiles.length && !$("#kaggle-fetch").disabled) loadNewSet(kaggleDataset);
   });
   $("#kaggle-fetch").addEventListener("click", nextKaggleSet);
 }

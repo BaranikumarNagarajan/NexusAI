@@ -1,9 +1,8 @@
 """OCR for scanned PDFs and invoice images, using a locally installed Tesseract.
 
 Tesseract is found via TESSERACT_CMD, then PATH, then the standard Windows install
-folders. Images are turned upright (orientation detection), normalised (grayscale, upscaled,
-auto-contrast) before OCR, and
-PDF pages are rendered at ~300 dpi with pypdfium2. No network calls.
+folders. Images are normalised (grayscale, upscaled, auto-contrast) before OCR; a page that reads
+as noise is turned upright with orientation detection and read again. PDF pages are rendered at ~300 dpi with pypdfium2. No network calls.
 """
 
 import io
@@ -22,6 +21,8 @@ OCR_TIMEOUT_SECONDS = 90
 # (1800 px: 40/41, misread '37,75' as '37,15'; sharpening cost 2 synthetic fields).
 TARGET_WIDTH = 2600
 MIN_OSD_CONFIDENCE = 1.5  # below this Tesseract's orientation guess is unreliable
+# Mean word confidence: upright scans score ~93-95, a sideways photo ~34 (70 once turned upright).
+MIN_UPRIGHT_CONFIDENCE = 60
 _STANDARD_PATHS = (
     r"C:\Program Files\Tesseract-OCR\tesseract.exe",
     r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
@@ -72,7 +73,7 @@ def _orient(image: Image.Image) -> Image.Image:
 
 
 def _prepare(image: Image.Image) -> bytes:
-    image = _orient(ImageOps.exif_transpose(image).convert("L"))
+    """Grayscale page -> upscaled, auto-contrasted PNG bytes for Tesseract."""
     if image.width < TARGET_WIDTH:  # upscale small scans; measured best on real invoices
         ratio = TARGET_WIDTH / image.width
         image = image.resize((TARGET_WIDTH, int(image.height * ratio)), Image.LANCZOS)
@@ -105,8 +106,26 @@ def _tesseract(png: bytes, page: int = 0) -> tuple[str, list[dict]]:
         key = (int(cols[2]), int(cols[3]), int(cols[4]))  # block, paragraph, line
         lines.setdefault(key, []).append(cols[11])
         words.append({"text": cols[11], "left": int(cols[6]), "top": int(cols[7]) + page * 100_000,
-                      "height": int(cols[9]), "line": (page, *key)})
+                      "height": int(cols[9]), "line": (page, *key), "conf": float(cols[10])})
     return "\n".join(" ".join(ws) for ws in lines.values()), words
+
+
+def _confidence(words: list[dict]) -> float:
+    return sum(w["conf"] for w in words) / len(words) if words else 0.0
+
+
+def _read_page(image: Image.Image, page: int) -> tuple[str, list[dict]]:
+    """OCR a page as it is; only if the result looks like noise, detect the orientation and retry.
+    Upright scans (the usual case) skip orientation detection, which matters on slow hosting CPUs."""
+    image = ImageOps.exif_transpose(image).convert("L")
+    text, words = _tesseract(_prepare(image), page)
+    if _confidence(words) >= MIN_UPRIGHT_CONFIDENCE:
+        return text, words
+    turned = _orient(image)
+    if turned is image:
+        return text, words
+    turned_text, turned_words = _tesseract(_prepare(turned), page)
+    return (turned_text, turned_words) if _confidence(turned_words) > _confidence(words) else (text, words)
 
 
 def ocr_image(data: bytes) -> tuple[str, int, list[dict]]:
@@ -115,12 +134,12 @@ def ocr_image(data: bytes) -> tuple[str, int, list[dict]]:
         frames = []
         for index in range(min(getattr(image, "n_frames", 1), MAX_OCR_PAGES)):  # multi-page TIFF
             image.seek(index)
-            frames.append(_prepare(image.copy()))
+            frames.append(image.copy())
     except OCRError:
         raise
     except Exception as exc:  # untrusted input
         raise OCRError("The image could not be opened.") from exc
-    results = [_tesseract(f, i) for i, f in enumerate(frames)]
+    results = [_read_page(f, i) for i, f in enumerate(frames)]
     return "\n".join(t for t, _ in results), len(frames), [w for _, ws in results for w in ws]
 
 
@@ -130,5 +149,5 @@ def ocr_pdf(data: bytes) -> tuple[str, int, list[dict]]:
         pages = [pdf[i].render(scale=300 / 72).to_pil() for i in range(min(len(pdf), MAX_OCR_PAGES))]
     except Exception as exc:  # untrusted input
         raise OCRError("The PDF pages could not be rendered for OCR.") from exc
-    results = [_tesseract(_prepare(p), i) for i, p in enumerate(pages)]
+    results = [_read_page(p, i) for i, p in enumerate(pages)]
     return "\n".join(t for t, _ in results), len(pages), [w for _, ws in results for w in ws]

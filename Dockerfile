@@ -7,13 +7,15 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
+# OMP_THREAD_LIMIT=1: one Tesseract thread is ~4x faster on small shared hosting CPUs (63 s -> 17 s a page).
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     API_HOST=0.0.0.0 \
     PORT=7860 \
-    TRUST_PROXY_HEADERS=true
+    TRUST_PROXY_HEADERS=true \
+    OMP_THREAD_LIMIT=1
 
 WORKDIR /app
 COPY backend/requirements.txt backend/requirements.txt

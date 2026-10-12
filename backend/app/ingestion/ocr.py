@@ -76,7 +76,7 @@ def _prepare(image: Image.Image) -> bytes:
     """Grayscale page -> upscaled, auto-contrasted PNG bytes for Tesseract."""
     if image.width < TARGET_WIDTH:  # upscale small scans; measured best on real invoices
         ratio = TARGET_WIDTH / image.width
-        image = image.resize((TARGET_WIDTH, int(image.height * ratio)), Image.LANCZOS)
+        image = image.resize((TARGET_WIDTH, int(image.height * ratio)), Image.Resampling.LANCZOS)
     image = ImageOps.autocontrast(image)
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
@@ -146,7 +146,9 @@ def ocr_image(data: bytes) -> tuple[str, int, list[dict]]:
 def ocr_pdf(data: bytes) -> tuple[str, int, list[dict]]:
     try:
         pdf = pdfium.PdfDocument(data)
-        pages = [pdf[i].render(scale=300 / 72).to_pil() for i in range(min(len(pdf), MAX_OCR_PAGES))]
+        # scale is pixels per PDF point (72 per inch); pypdfium2 accepts a float, its type hint says int.
+        pages = [pdf[i].render(scale=300 / 72).to_pil()  # pyright: ignore[reportArgumentType]
+                 for i in range(min(len(pdf), MAX_OCR_PAGES))]
     except Exception as exc:  # untrusted input
         raise OCRError("The PDF pages could not be rendered for OCR.") from exc
     results = [_read_page(p, i) for i, p in enumerate(pages)]

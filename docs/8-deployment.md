@@ -30,9 +30,22 @@ Tesseract is a program, not a Python package. In the container it is installed b
 Dockerfile (`apt-get install tesseract-ocr`, which includes English and orientation detection),
 and the code finds it on `PATH` automatically — `TESSERACT_CMD` is not needed.
 
+## Protect the public demo
+
+Set `ACCESS_PASSWORD` (and `TRUST_PROXY_HEADERS=true`) on the backend host. Visitors then sign in
+before anything runs, and rate limits cap reviews, Kaggle downloads, OCR and login attempts, so
+the Ollama, Kaggle and Supabase quotas can't be used up — see
+[Access password and rate limits](6-api-reference.md#access-password-and-rate-limits).
+
+## Frontend → backend address
+
+When the frontend is on Vercel and the backend elsewhere, set the backend URL in
+`frontend/config.js` (`apiBase: "https://<your-backend>"`) and add the Vercel address to the
+backend's `API_CORS_ORIGINS`. When one container serves both, leave `apiBase` empty.
+
 ## Secrets
 
-`SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `OLLAMA_API_KEY` and `KAGGLE_API_KEY` are set in the
+`SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `OLLAMA_API_KEY`, `KAGGLE_API_KEY` and `ACCESS_PASSWORD` are set in the
 backend host's environment settings — never in GitHub. `backend/.env` is git-ignored. The
 frontend needs no secrets. The backend's `API_CORS_ORIGINS` must include the Vercel domain.
 

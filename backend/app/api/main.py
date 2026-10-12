@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.gateway import AgentGateway
 from app.api.routes import MAX_UPLOAD_BYTES, router
+from app.api.security import AccessGuard, Limit, RateLimiter, security_middleware
 from app.config import ApiSettings
 from app.persistence.reviews import ReviewRepository
 from app.protocol.server import MaxBodySizeMiddleware
@@ -51,16 +52,28 @@ def create_app(settings: ApiSettings, reviews: ReviewRepository | None) -> FastA
         description=DESCRIPTION,
         lifespan=lifespan,
     )
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type"],
-    )
+    app.state.guard = AccessGuard(settings.access_password, settings.access_token_hours)
+    app.state.limiter = RateLimiter({rule: [(Limit.parse(text), is_global) for text, is_global in limits]
+                                     for rule, limits in settings.rate_limits.items()})
+    app.state.trust_proxy = settings.trust_proxy_headers
+    if app.state.guard.enabled:
+        logger.info("Access password enabled: the web app asks for it before using the API.")
+    else:
+        logger.warning("ACCESS_PASSWORD is not set: the API is open (fine locally, not for a public deployment).")
+
+    # Middleware added last runs first: CORS outermost (so 401/413/429 answers still carry CORS
+    # headers), then the body-size limit, then the access check and rate limits.
+    app.middleware("http")(security_middleware)
     app.add_middleware(
         MaxBodySizeMiddleware,
         max_bytes=settings.max_request_bytes,
         path_limits={"/api/documents": MAX_UPLOAD_BYTES + 64 * 1024},  # file + multipart overhead
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type", "Authorization"],
     )
     app.include_router(router)
 

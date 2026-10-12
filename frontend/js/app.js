@@ -1,6 +1,6 @@
 // NexusAI web app: hash router, theme, live status, and the review drawer.
 import { renderSavedReview } from "./components/result.js";
-import { api, detailOf } from "./lib/api.js";
+import { api, detailOf, hasToken, setToken } from "./lib/api.js";
 import { $, $$, fill, h, toast } from "./lib/dom.js";
 import { initHistory, refreshHistory } from "./views/history.js";
 import { initOverview, refreshOverview, rethemeOverview, updatePipeline } from "./views/overview.js";
@@ -112,7 +112,32 @@ function init() {
   $("#drawer-scrim").addEventListener("click", closeDrawer);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
   $("#system-refresh").addEventListener("click", () => refreshSystem(health));
+  $("#signin-form").addEventListener("submit", signIn);
+  $("#signout").addEventListener("click", () => { setToken(null); location.reload(); });
+  window.addEventListener("nexusai:signin-required", showSignin);
+  window.addEventListener("hashchange", () => { if (started) route(); });
+  start();
+  setInterval(refreshStatus, 15000);
+}
 
+// ---------------------------------------------------------------- sign-in (backend ACCESS_PASSWORD)
+
+let started = false;
+
+/** Load the pages only once the API can be used: open API, or a valid token. */
+async function start() {
+  await refreshStatus();
+  if (health?.auth_required) {
+    $("#signout").hidden = false;
+    const status = hasToken() ? await api("/api/auth/status") : null;
+    if (!status?.data?.signed_in) { showSignin(); return; }
+  }
+  startViews();
+}
+
+function startViews() {
+  if (started) return;
+  started = true;
   initOverview({ onOpenReview: openReview });
   initHistory({ onOpenReview: openReview });
   initReview({
@@ -124,9 +149,35 @@ function init() {
       toast("Dashboard updated with this review.");
     },
   });
-  window.addEventListener("hashchange", route);
-  refreshStatus().then(route);
-  setInterval(refreshStatus, 15000);
+  route();
+}
+
+function showSignin() {
+  $("#signin").hidden = false;
+  $("#signin-error").hidden = true;
+  setTimeout(() => $("#signin-password").focus(), 50);
+}
+
+async function signIn(event) {
+  event.preventDefault();
+  const button = $("#signin-submit");
+  const password = $("#signin-password");
+  button.disabled = true;
+  const res = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ password: password.value }) });
+  button.disabled = false;
+  if (!res.ok) {
+    const error = $("#signin-error");
+    error.textContent = res.status === 401 ? "Wrong password. Please try again." : detailOf(res);
+    error.hidden = false;
+    password.select();
+    return;
+  }
+  setToken(res.data.token);
+  password.value = "";
+  $("#signin").hidden = true;
+  if (started) route(); // the token had expired while the app was open: just reload the page's data
+  else startViews();
+  refreshStatus();
 }
 
 // Chart.js is loaded with `defer`; module scripts also run after parsing, but wait for it to be safe.

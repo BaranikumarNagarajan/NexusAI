@@ -100,6 +100,7 @@ class Health(BaseModel):
     verifier: Literal["online", "offline"]
     storage: Literal["connected", "not_configured", "error"]
     ocr: Literal["available", "not_installed"] = "not_installed"
+    auth_required: bool = Field(False, description="True when ACCESS_PASSWORD is set: sign in first")
     reasoning: Literal["llm", "built_in", "unknown"] = "unknown"
     reasoning_model: str | None = None
     reasoning_provider: str | None = None
@@ -168,3 +169,17 @@ class SampleInfo(BaseModel):
     name: str
     title: str
     expected_result: str
+
+
+class LoginRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=200)
+
+
+class LoginResponse(BaseModel):
+    token: str = Field(description="Send as 'Authorization: Bearer <token>'")
+    expires_in: int = Field(description="Seconds until the token expires")
+
+
+class AuthStatus(BaseModel):
+    auth_required: bool
+    signed_in: bool

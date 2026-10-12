@@ -15,6 +15,7 @@ payment decision.
 ![Ollama Cloud](https://img.shields.io/badge/AI-Ollama%20Cloud%20·%20gpt--oss-black?logo=ollama&logoColor=white)
 ![Tesseract](https://img.shields.io/badge/OCR-Tesseract%205-5A5A5A)
 ![Frontend](https://img.shields.io/badge/Frontend-HTML%20·%20CSS%20·%20JS-F7DF1E?logo=javascript&logoColor=black)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 <img src="docs/images/architecture.svg" alt="Animated architecture: a review travels from the web app through the API to Agent A, over A2A to Agent B, into Supabase, through the AI model and back" width="100%">
 
@@ -130,12 +131,14 @@ Folders are listed in the order a review travels through them.
 ```text
 NexusAI/
 ├── README.md
+├── LICENSE                               MIT
 ├── docs/                                 ← detailed docs, numbered in process order
 │   ├── 1-documents-and-ocr.md  …  9-testing-and-verification.md
 │   └── images/                           screenshots, GIFs, animated architecture
 │
 ├── frontend/                             WEB APP (no build step, served by the API)
-│   ├── index.html                        app shell and the six pages
+│   ├── index.html                        app shell, the six pages, sign-in screen
+│   ├── config.js                         apiBase: where the backend runs
 │   ├── css/styles.css                    design system, light/dark, animations
 │   ├── js/app.js                         router, theme, live status
 │   ├── js/lib/                           api · dom · meta · charts helpers
@@ -180,7 +183,8 @@ NexusAI/
     │   └── api/                          STEP 6 · FastAPI gateway for the web app
     │       ├── main.py · __main__.py     app factory, CORS, limits / start
     │       ├── routes.py · schemas.py    endpoints and response models
-    │       └── gateway.py                calls Agent A over A2A
+    │       ├── security.py               access password + rate limits
+│       └── gateway.py                calls Agent A over A2A
     │
     ├── scripts/                          command-line tools, numbered in order of use
     ├── samples/
@@ -204,9 +208,12 @@ Every value except the keys has a working default.
 | **Kaggle** | `KAGGLE_API_KEY` | Only for the *Real invoices* tab |
 | **OCR** | `TESSERACT_CMD` | Only if Tesseract isn't on `PATH` |
 | **Ports & URLs** | `AGENT_B_PORT` (10001), `AGENT_A_PORT` (10002), `API_PORT` (8080), `AGENT_B_URL`, `AGENT_A_URL` | Defaults work locally |
+| **Public deployment** | `ACCESS_PASSWORD`, `TRUST_PROXY_HEADERS`, `RATE_LIMIT_*` | Password screen + rate limits so nobody can use up the AI, Kaggle or Supabase quotas — [details](docs/6-api-reference.md#access-password-and-rate-limits) |
 | **Limits** | `API_CORS_ORIGINS`, `MAX_REQUEST_BYTES`, `DELEGATION_TIMEOUT_SECONDS`, `API_REQUEST_TIMEOUT_SECONDS`, `LLM_TIMEOUT_SECONDS` | Safe defaults |
 
-Secrets are never logged, never sent to the browser and never committed.
+Secrets are never logged, never sent to the browser and never committed. The frontend has one
+setting of its own, `frontend/config.js` → `apiBase`: empty when the API serves the web app, or
+the backend's URL when the frontend is hosted separately (e.g. on Vercel).
 
 ---
 
@@ -241,6 +248,7 @@ Run from `backend/` with the virtual environment active.
 | Phase 5 — RAG over procurement policies | ⏳ optional | not needed so far |
 | Phase 6 — professional HTML/CSS/JS dashboard | ✅ | [docs/7](docs/7-web-app.md) |
 | Phase 7 — deployment | ⏳ next | [docs/8](docs/8-deployment.md) |
+| Security: no credentials in code or logs, validated input, timeouts | ✅ | `.env` only; access password, rate limits, token masking in logs |
 | Automated tests | ✅ run, then removed | 150 passed; kept out of the repo by choice — [docs/9](docs/9-testing-and-verification.md) |
 
 ---
@@ -279,3 +287,5 @@ Run from `backend/` with the virtual environment active.
 *Synthetic Invoice OCR Dataset* by nowshinaranini (CC BY 4.0) ·
 *Indian Grocery Tax Invoice Image Dataset* by surajitsadhukhan (CC BY 4.0).
 All demo companies and figures in `backend/samples/` are fictional.
+
+**License:** [MIT](LICENSE) © 2026 Barani Kumar Nagarajan

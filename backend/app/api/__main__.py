@@ -1,6 +1,7 @@
 """Run the NexusAI API locally: ``python -m app.api``."""
 
 import logging
+import re
 import sys
 from urllib.parse import urlparse
 
@@ -34,6 +35,16 @@ def _review_repository() -> ReviewRepository | None:
     return repository
 
 
+class _RedactTokens(logging.Filter):
+    """Access logs print the full URL; never let an ?access_token=... (image links) reach the log."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.args, tuple):
+            record.args = tuple(re.sub(r"access_token=[^&\s]+", "access_token=***", a) if isinstance(a, str) else a
+                                for a in record.args)
+        return True
+
+
 def main() -> None:
     settings = load_api_settings()
     logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -48,7 +59,10 @@ def main() -> None:
         logger.info("OCR available: %s", tesseract)
     else:
         logger.warning("OCR not available (Tesseract not found): scanned PDFs and images will be rejected. Set TESSERACT_CMD.")
-    uvicorn.run(app, host=settings.host, port=settings.port, timeout_keep_alive=5, log_level="info")
+    logging.getLogger("uvicorn.access").addFilter(_RedactTokens())
+    # Behind a hosting proxy, uvicorn also reports the visitor's real IP and https scheme.
+    uvicorn.run(app, host=settings.host, port=settings.port, timeout_keep_alive=5, log_level="info",
+                proxy_headers=settings.trust_proxy_headers, forwarded_allow_ips="*" if settings.trust_proxy_headers else None)
 
 
 if __name__ == "__main__":

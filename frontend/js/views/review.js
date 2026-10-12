@@ -1,6 +1,6 @@
 // New review: documents (PDF/image + OCR) -> check data -> run through Agent A -> Agent B.
 import { renderError, renderSteps, renderSubmission, emptyState } from "../components/result.js";
-import { API_BASE, api, detailOf } from "../lib/api.js";
+import { api, detailOf, withToken } from "../lib/api.js";
 import { $, $$, fill, h, icon, toast } from "../lib/dom.js";
 import { RESULT } from "../lib/meta.js";
 
@@ -262,7 +262,9 @@ function closePreview() {
 }
 
 async function fetchAsFile(url, type) {
-  const blob = await (await fetch(API_BASE + url)).blob();
+  const response = await fetch(withToken(url));
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const blob = await response.blob();
   return new File([blob], url.split("/").pop(), { type });
 }
 
@@ -340,7 +342,7 @@ function renderKaggleGrid(data) {
   }
   fill($("#kaggle-grid"), kaggleFiles.map((file) => {
     const card = h("button", { type: "button", class: "k-card", title: `Load ${file.file}`, onclick: () => loadKaggle(file, card) },
-      h("span", { class: "k-thumb" }, h("img", { src: API_BASE + file.url, alt: `Invoice ${file.invoice_number || file.file}`, loading: "lazy" })),
+      h("span", { class: "k-thumb" }, h("img", { src: withToken(file.url), alt: `Invoice ${file.invoice_number || file.file}`, loading: "lazy" })),
       h("span", { class: "k-meta" },
         h("strong", {}, file.seller || data.kind || file.file),
         h("small", {}, [file.invoice_number ? `#${file.invoice_number}` : file.file, file.items ? `${file.items} items` : ""]

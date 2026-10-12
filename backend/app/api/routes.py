@@ -7,19 +7,23 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi import Path as PathParam
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.security import HTTPBearer
 
 from app.agents.invoice_verifier.money import fmt_amount, minor_units
 from app.api.gateway import AgentGateway, AgentUnavailableError
 from app.api.schemas import (
     AgentInfo,
     Analytics,
+    AuthStatus,
     DocumentExtraction,
     ErrorResponse,
     Health,
+    LoginRequest,
+    LoginResponse,
     Persistence,
     ReviewDetail,
     ReviewPage,
@@ -29,13 +33,16 @@ from app.api.schemas import (
     SampleInfo,
     SamplePdf,
 )
+from app.api.security import request_token
 from app.ingestion.kaggle_import import DATASETS, MAX_PER_CALL, KaggleError, folder, load_manifest, refresh
 from app.ingestion.ocr import ocr_status
 from app.ingestion.pdf_extract import ExtractionError, detect_kind, extract_document
 from app.persistence.reviews import STATUSES, PersistenceError, ReviewRepository
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api")
+# The access check itself is the security middleware; this only adds the "Authorize" button to /docs.
+_bearer = HTTPBearer(auto_error=False, description="Token from POST /api/auth/login (only when ACCESS_PASSWORD is set)")
+router = APIRouter(prefix="/api", dependencies=[Depends(_bearer)])
 
 SAMPLES_DIR = Path(__file__).resolve().parents[2] / "samples"
 SAMPLES = {
@@ -132,7 +139,27 @@ async def health(request: Request) -> Health:
         reasoning_model=reasoning.get("model"),
         reasoning_provider=reasoning.get("provider"),
         reasoning_detail=reasoning.get("detail"),
+        auth_required=request.app.state.guard.enabled,
     )
+
+
+@router.post("/auth/login", response_model=LoginResponse, tags=["status"], summary="Exchange the access password for a token",
+             responses={401: {"model": ErrorResponse}, 404: {"model": ErrorResponse}, 429: {"model": ErrorResponse}})
+async def login(request: Request, body: LoginRequest) -> LoginResponse:
+    guard = request.app.state.guard
+    if not guard.enabled:
+        raise HTTPException(404, "No access password is configured; the API is open.")
+    if not guard.check_password(body.password):
+        logger.warning("Failed sign-in attempt")
+        raise HTTPException(401, "Wrong password.")
+    token, expires_in = guard.issue()
+    return LoginResponse(token=token, expires_in=expires_in)
+
+
+@router.get("/auth/status", response_model=AuthStatus, tags=["status"], summary="Is a password needed, and is this token valid?")
+async def auth_status(request: Request) -> AuthStatus:
+    guard = request.app.state.guard
+    return AuthStatus(auth_required=guard.enabled, signed_in=guard.verify(request_token(request)))
 
 
 @router.get("/agents", response_model=list[AgentInfo], tags=["status"], summary="Discovered A2A agents")

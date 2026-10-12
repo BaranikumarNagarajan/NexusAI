@@ -7,6 +7,7 @@
   <meta name="description" content="A2A-powered invoice verification and procurement review.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234f46e5'/%3E%3Cpath d='M9 22V10l14 12V10' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/styles.css">
+  <script src="config.js"></script>
   <script src="vendor/chart.umd.min.js" defer></script>
   <script type="module" src="js/app.js"></script>
 </head>
@@ -63,6 +64,9 @@
         <span class="health-pill" id="health-pill">Checking…</span>
         <a class="btn primary small" href="#/review" id="top-new">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New review</a>
+        <button id="signout" class="icon-btn" type="button" aria-label="Sign out" title="Sign out" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4"/></svg>
+        </button>
         <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle dark mode" title="Toggle theme">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
         </button>
@@ -443,5 +447,20 @@
 </aside>
 <div class="drawer-scrim" id="drawer-scrim" hidden></div>
 <div id="toasts" class="toasts" aria-live="assertive"></div>
+
+<!-- ============ sign-in (only when the backend has ACCESS_PASSWORD set) ============ -->
+<div class="signin" id="signin" role="dialog" aria-modal="true" aria-labelledby="signin-title" hidden>
+  <form class="signin-card" id="signin-form" autocomplete="on">
+    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="9"/><path d="M9 22V10l14 12V10"/></svg></span>
+    <h2 id="signin-title">Sign in to NexusAI</h2>
+    <p class="muted">This demo is protected so its AI, database and dataset quotas are not used up. Enter the access password you were given.</p>
+    <label class="field">Access password
+      <input type="password" id="signin-password" name="password" autocomplete="current-password" required>
+    </label>
+    <p class="signin-error" id="signin-error" role="alert" hidden></p>
+    <button type="submit" class="btn primary" id="signin-submit">Sign in</button>
+    <p class="signin-note">You stay signed in on this browser for 12 hours.</p>
+  </form>
+</div>
 </body>
 </html>

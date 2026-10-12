@@ -9,7 +9,8 @@ Code: [`frontend/`](../frontend/)
 
 | File | Job |
 |---|---|
-| `index.html` | App shell: sidebar, top bar, the six pages, the history drawer |
+| `index.html` | App shell: sidebar, top bar, the six pages, the history drawer, the sign-in screen |
+| `config.js` | `apiBase`: empty = same site as the API; or the backend URL when hosted separately |
 | `css/styles.css` | Design tokens, light / dark theme, responsive layout, animations |
 | `js/app.js` | Router, theme, live status, drawer |
 | `js/lib/` | `api.js` (fetch wrapper), `dom.js` (safe element helpers), `meta.js` (labels, colours), `charts.js` |
@@ -40,4 +41,6 @@ Code: [`frontend/`](../frontend/)
 
 - Light and dark themes (follows the system, with a toggle); works down to phone width; respects
   reduced motion.
-- All data is inserted as text, never as HTML; the page talks only to `/api/*`.
+- All data is inserted as text, never as HTML; the page talks only to the NexusAI API.
+- When the backend has an access password, a sign-in screen appears first; the token is kept in
+  this browser for 12 hours, and the top-bar button signs out.

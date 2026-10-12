@@ -144,6 +144,24 @@ class ApiSettings:
     request_timeout_seconds: float
     max_request_bytes: int
     log_level: str
+    access_password: str = field(default="", repr=False)  # blank = open API (local development)
+    access_token_hours: float = 12.0
+    trust_proxy_headers: bool = False  # true behind a hosting proxy (Render, Railway, Fly...)
+    rate_limits: dict = field(default_factory=dict)  # rule -> [(limit text, is_global)]
+
+
+# Per-client limits on the paid / heavy endpoints, plus daily totals across all visitors.
+_RATE_LIMIT_DEFAULTS = {
+    "reviews": [("RATE_LIMIT_REVIEWS", "6/minute", False), ("RATE_LIMIT_REVIEWS_TOTAL", "300/day", True)],
+    "ocr": [("RATE_LIMIT_OCR", "20/minute", False)],
+    "kaggle": [("RATE_LIMIT_KAGGLE", "4/minute", False), ("RATE_LIMIT_KAGGLE_TOTAL", "100/day", True)],
+    "login": [("RATE_LIMIT_LOGIN", "5/minute", False)],
+}
+
+
+def _rate_limits() -> dict:
+    return {rule: [(os.getenv(name, default).strip() or default, is_global) for name, default, is_global in entries]
+            for rule, entries in _RATE_LIMIT_DEFAULTS.items()}
 
 
 def load_api_settings() -> ApiSettings:
@@ -161,6 +179,10 @@ def load_api_settings() -> ApiSettings:
         request_timeout_seconds=float(_int_env("API_REQUEST_TIMEOUT_SECONDS", 120)),
         max_request_bytes=_int_env("MAX_REQUEST_BYTES", 256 * 1024),
         log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
+        access_password=os.getenv("ACCESS_PASSWORD", "").strip(),
+        access_token_hours=float(os.getenv("ACCESS_TOKEN_HOURS", "12") or 12),
+        trust_proxy_headers=os.getenv("TRUST_PROXY_HEADERS", "false").strip().lower() in {"1", "true", "yes", "on"},
+        rate_limits=_rate_limits(),
     )
 
 

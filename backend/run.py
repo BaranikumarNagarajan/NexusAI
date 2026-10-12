@@ -103,7 +103,7 @@ def main() -> None:
     services = [
         Service("agent-b", "app.agents.invoice_verifier", f"{b.public_url}/.well-known/agent-card.json", b.public_url),
         Service("agent-a", "app.agents.procurement_coordinator", f"{a.public_url}/.well-known/agent-card.json", a.public_url),
-        Service("api", "app.api", f"{api_url}/api/samples", api_url),
+        Service("api", "app.api", f"{api_url}/api/health", api_url),
     ]
 
     busy = [s for s in services if _port_in_use(s.bind_url)]

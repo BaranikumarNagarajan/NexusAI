@@ -314,4 +314,12 @@ Run from `backend/` with the virtual environment active.
 *Indian Grocery Tax Invoice Image Dataset* by surajitsadhukhan (CC BY 4.0).
 All demo companies and figures in `backend/samples/` are fictional.
 
+---
+
+## 👤 Author
+
+**Baranikumar Nagarajan** — [github.com/BaranikumarNagarajan](https://github.com/BaranikumarNagarajan)
+· Project: [github.com/BaranikumarNagarajan/NexusAI](https://github.com/BaranikumarNagarajan/NexusAI)
+· Live demo: [nexusai-wnn7.onrender.com](https://nexusai-wnn7.onrender.com) (access password required)
+
 **License:** [MIT](LICENSE) © 2026 Baranikumar Nagarajan

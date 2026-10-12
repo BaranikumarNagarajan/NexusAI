@@ -85,9 +85,8 @@ Every push to `main` then redeploys automatically once CI is green. The free pla
 
 ## Other hosts
 
-The same image runs elsewhere without code changes — for example a **Hugging Face Docker Space**
-(free, more memory; set `app_port: 7860` in the Space README and add the variables above as Space
-secrets), Railway or Fly.io.
+The same image runs elsewhere without code changes, e.g. Railway, Fly.io or Google Cloud Run.
+(Hugging Face Docker Spaces now need a paid plan, so they were not used.)
 
 ## Sharing with your team
 

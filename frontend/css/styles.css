@@ -870,6 +870,12 @@ details.tech[open] summary { color: var(--text-2); }
 @keyframes rise { from { transform: translateY(8px); opacity: 0; } }
 .footer { padding: 6px clamp(16px, 2.6vw, 32px) 26px; color: var(--muted); font-size: .78rem; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; max-width: 1480px; width: 100%; margin: 0 auto; }
 .footer p { margin: 0; }
+.footer .author { flex-basis: 100%; display: flex; align-items: center; gap: .35rem; flex-wrap: wrap;
+  padding-top: 10px; border-top: 1px solid var(--border); }
+.footer .author strong { color: var(--text); }
+.footer .author a { display: inline-flex; align-items: center; gap: .3rem; color: var(--brand); text-decoration: none; font-weight: 600; }
+.footer .author a:hover { text-decoration: underline; }
+.footer .author svg { width: 14px; height: 14px; fill: currentColor; }
 
 /* ============ responsive ============ */
 @media (max-width: 1280px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .services { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

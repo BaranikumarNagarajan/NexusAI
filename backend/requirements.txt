@@ -8,6 +8,6 @@ supabase==2.32.0              # Supabase client for review persistence (server-s
 fastapi==0.143.0              # HTTP API gateway for the frontend (python -m app.api)
 python-multipart==0.0.32      # file uploads in FastAPI (PDF ingestion)
 pdfplumber==0.11.10           # text + table extraction from PDFs
-fpdf2==2.8.9                  # synthetic sample PDF generation (scripts/generate_sample_pdfs.py)
+fpdf2==2.8.9                  # synthetic sample PDF generation (scripts/2_generate_sample_pdfs.py)
 pypdfium2==5.14.0             # render PDF pages for OCR (also used by pdfplumber)
 pillow==12.3.0                # image preparation for OCR

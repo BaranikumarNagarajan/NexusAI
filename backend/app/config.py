@@ -171,7 +171,8 @@ def load_api_settings() -> ApiSettings:
     )
     return ApiSettings(
         host=os.getenv("API_HOST", "127.0.0.1"),
-        port=_int_env("API_PORT", 8080),
+        # Hosting platforms (Render, Hugging Face Spaces, Railway...) tell the app its port in PORT.
+        port=_int_env("API_PORT", _int_env("PORT", 8080)),
         cors_origins=[o.strip().rstrip("/") for o in origins.split(",") if o.strip()],
         agent_a_url=(os.getenv("AGENT_A_URL") or "http://127.0.0.1:10002").rstrip("/"),
         agent_b_url=(os.getenv("AGENT_B_URL") or "http://127.0.0.1:10001").rstrip("/"),

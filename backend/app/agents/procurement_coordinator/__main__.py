@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import os
 
 import uvicorn
 
@@ -19,7 +20,9 @@ def _llm_client() -> tuple[ChatClient | None, str]:
         missing_key = {"huggingface": "No Hugging Face token configured (HF_TOKEN).",
                        "openai": "No LLM_API_KEY configured.",
                        "ollama": "No OLLAMA_API_KEY configured for Ollama Cloud."}.get(settings.provider)
-        reason = missing_key if missing_key and not settings.token else "AI reasoning disabled in configuration."
+        switched_off = os.getenv("LLM_ENABLED", "true").strip().lower() in {"0", "false", "no", "off"}
+        reason = ("AI reasoning is switched off (LLM_ENABLED=false)." if switched_off or not missing_key or settings.token
+                  else missing_key)
         logger.info("AI reasoning: %s Using the built-in explanation writer.", reason)
         return None, reason
     client = ChatClient(settings.provider, settings.model, base_url=settings.base_url, token=settings.token,

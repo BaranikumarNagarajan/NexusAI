@@ -26,6 +26,9 @@ verified with temporary tests and live runs, recorded here.
 | PDF extraction | All 10 sample PDFs extract exactly; wrong document type, damaged files, oversize and path traversal rejected |
 | OCR | 195/196 synthetic fields as images; 24/24 invoice numbers and totals on labelled Kaggle scans; sideways phone photos turned upright |
 | AI reasoning (Ollama Cloud) | All scenarios written by `gpt-oss:120b` in ~4–6 s; fact check verified 17–24 figures per review; a real self-correction round passed; built-in writer used when the model is unavailable |
+| Docker | Image built with Docker Desktop; all services start; review with AI explanation saved to Supabase; OCR and Kaggle work; password enforced; ~250 MB RAM; clean shutdown |
+| CI smoke test | Every push builds the image and sends four scenarios through Agent A → Agent B over A2A |
+| Access password | Wrong / tampered tokens rejected; limits return `429`; tokens masked in logs |
 | Web app (headless Edge) | Full review through the UI, report tabs, history drawer, Kaggle refresh, How it works speeds; no console errors |
 
 ## How to re-check by hand

@@ -8,12 +8,14 @@ Two independent AI agents talk over the **Agent2Agent (A2A) protocol** to check 
 against its purchase order — exact rules decide, an AI model explains, and a person makes the
 payment decision.
 
+[![CI](https://github.com/BaranikumarNagarajan/NexusAI/actions/workflows/ci.yml/badge.svg)](https://github.com/BaranikumarNagarajan/NexusAI/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![A2A SDK](https://img.shields.io/badge/A2A%20SDK-1.2.2-6366F1)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.143-009688?logo=fastapi&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3FCF8E?logo=supabase&logoColor=white)
 ![Ollama Cloud](https://img.shields.io/badge/AI-Ollama%20Cloud%20·%20gpt--oss-black?logo=ollama&logoColor=white)
 ![Tesseract](https://img.shields.io/badge/OCR-Tesseract%205-5A5A5A)
+![Docker](https://img.shields.io/badge/Docker-one%20image-2496ED?logo=docker&logoColor=white)
 ![Frontend](https://img.shields.io/badge/Frontend-HTML%20·%20CSS%20·%20JS-F7DF1E?logo=javascript&logoColor=black)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
@@ -31,12 +33,13 @@ payment decision.
 1. [See it in action](#-see-it-in-action)
 2. [How one review flows](#-how-one-review-flows)
 3. [Quick start](#-quick-start)
-4. [Project structure](#-project-structure)
-5. [Configuration](#-configuration)
-6. [Scripts, in the order you use them](#-scripts-in-the-order-you-use-them)
-7. [Project brief coverage](#-project-brief-coverage)
-8. [Documentation](#-documentation)
-9. [Tech stack and credits](#-tech-stack-and-credits)
+4. [Deploy with Docker](#-deploy-with-docker)
+5. [Project structure](#-project-structure)
+6. [Configuration](#-configuration)
+7. [Scripts, in the order you use them](#-scripts-in-the-order-you-use-them)
+8. [Project brief coverage](#-project-brief-coverage)
+9. [Documentation](#-documentation)
+10. [Tech stack and credits](#-tech-stack-and-credits)
 
 ---
 
@@ -91,8 +94,9 @@ only through its published Agent Card and its A2A results.
 (for scans and photos), a Supabase project, an Ollama Cloud API key.
 
 ```powershell
-# 1. Install
-cd D:\NexusAI
+# 1. Get the code and install
+git clone https://github.com/BaranikumarNagarajan/NexusAI.git
+cd NexusAI
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r backend\requirements.txt
@@ -124,6 +128,27 @@ python -m app.api                              # API + web app  :8080
 
 ---
 
+## 🐳 Deploy with Docker
+
+One image runs everything — both agents, the API, the web app and Tesseract OCR:
+
+```powershell
+docker build -t nexusai .
+docker run --rm -p 7860:7860 -e ACCESS_PASSWORD=choose-one -e SUPABASE_URL=... -e SUPABASE_SECRET_KEY=... -e OLLAMA_API_KEY=... -e KAGGLE_API_KEY=... nexusai
+```
+
+| Step | What happens |
+|---|---|
+| **git push** | GitHub Actions checks the code, builds the image and sends real reviews through Agent A → Agent B over A2A inside it |
+| **Render** | Redeploys the web service automatically once the checks pass |
+| **Hugging Face Space** | The workflow pushes the app to the Space, which rebuilds it |
+
+Public deployments are protected by an **access password** and **rate limits**, so the AI, Kaggle
+and Supabase quotas can't be used up — share the link and the password with your team.
+Step-by-step setup for Render and Hugging Face: **[docs/8 · Deployment](docs/8-deployment.md)**.
+
+---
+
 ## 📁 Project structure
 
 Folders are listed in the order a review travels through them.
@@ -132,6 +157,8 @@ Folders are listed in the order a review travels through them.
 NexusAI/
 ├── README.md
 ├── LICENSE                               MIT
+├── Dockerfile                            one image: agents + API + web app + OCR
+├── .github/workflows/ci.yml              CI/CD: check → build & smoke-test → deploy
 ├── docs/                                 ← detailed docs, numbered in process order
 │   ├── 1-documents-and-ocr.md  …  9-testing-and-verification.md
 │   └── images/                           screenshots, GIFs, animated architecture
@@ -247,7 +274,7 @@ Run from `backend/` with the virtual environment active.
 | Phase 4 — LLM explanations; rules keep the arithmetic | ✅ | [docs/5](docs/5-ai-reasoning.md) — Ollama Cloud by default, Hugging Face supported |
 | Phase 5 — RAG over procurement policies | ⏳ optional | not needed so far |
 | Phase 6 — professional HTML/CSS/JS dashboard | ✅ | [docs/7](docs/7-web-app.md) |
-| Phase 7 — deployment | ⏳ next | [docs/8](docs/8-deployment.md) |
+| Phase 7 — deployment | ✅ | Docker image, GitHub Actions CI/CD, Render / Hugging Face Spaces — [docs/8](docs/8-deployment.md) |
 | Security: no credentials in code or logs, validated input, timeouts | ✅ | `.env` only; access password, rate limits, token masking in logs |
 | Automated tests | ✅ run, then removed | 150 passed; kept out of the repo by choice — [docs/9](docs/9-testing-and-verification.md) |
 
@@ -264,7 +291,7 @@ Run from `backend/` with the virtual environment active.
 | 5 | [AI reasoning](docs/5-ai-reasoning.md) | Guardrails, fact check, providers |
 | 6 | [API reference](docs/6-api-reference.md) | Every endpoint and how the API protects the system |
 | 7 | [Web app](docs/7-web-app.md) | Pages, report tabs, code layout |
-| 8 | [Deployment](docs/8-deployment.md) | Vercel + Docker host + Supabase + Ollama Cloud |
+| 8 | [Deployment](docs/8-deployment.md) | Docker, CI/CD, Render, Hugging Face Spaces, sharing with the team |
 | 9 | [Testing and verification](docs/9-testing-and-verification.md) | What was tested, results, known limitations |
 
 ---

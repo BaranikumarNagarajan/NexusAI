@@ -1,0 +1,12 @@
+# Keep the image small and free of secrets.
+.git
+.github
+.venv
+.tmp
+.vscode
+docs
+**/__pycache__
+**/*.pyc
+backend/.env
+backend/samples/kaggle
+*.md

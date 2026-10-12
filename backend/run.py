@@ -12,6 +12,7 @@ Logs from all three appear here with a prefix. Press Ctrl+C once to stop everyth
 
 import argparse
 import os
+import signal
 import socket
 import subprocess
 import sys
@@ -89,10 +90,16 @@ def _port_in_use(url: str) -> bool:
         return s.connect_ex((parsed.hostname or "127.0.0.1", parsed.port or 80)) == 0
 
 
+def _stop_on_sigterm(signum, frame) -> None:
+    raise KeyboardInterrupt
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Start Agent B, Agent A and the NexusAI web app.")
     parser.add_argument("--no-browser", action="store_true", help="don't open the web app in a browser")
     args = parser.parse_args()
+    # In a container `docker stop` sends SIGTERM: stop the three services as cleanly as Ctrl+C does.
+    signal.signal(signal.SIGTERM, _stop_on_sigterm)
 
     use_color = sys.stdout.isatty()
     if use_color and os.name == "nt":

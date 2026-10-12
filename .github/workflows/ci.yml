@@ -1,0 +1,108 @@
+# CI/CD for NexusAI
+#   1. check   - Python compiles and lints, JavaScript parses
+#   2. docker  - build the image, run it, and send real reviews through Agent A -> Agent B over A2A
+#   3. deploy  - push to a Hugging Face Space (only when HF_SPACE / HF_TOKEN are configured)
+# Render deploys itself from GitHub; set its Auto-Deploy to "After CI checks pass".
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt ruff
+      - name: Python compiles
+        run: python -m compileall -q backend
+      - name: Lint (errors and unused code)
+        run: ruff check backend --select F,E9 --target-version py311
+      - name: Every module imports
+        working-directory: backend
+        run: python -c "import app.api.main, app.agents.invoice_verifier.server, app.agents.procurement_coordinator.server, app.ingestion.kaggle_import"
+      - name: JavaScript parses
+        run: for f in frontend/config.js $(find frontend/js -name '*.js'); do node --check "$f" || exit 1; done
+
+  docker:
+    name: Build and smoke-test the container
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t nexusai:ci .
+      - name: Start container (no secrets; password on)
+        run: |
+          docker run -d --name nexusai -p 7860:7860 \
+            -e ACCESS_PASSWORD=ci-password -e LLM_ENABLED=false nexusai:ci
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:7860/api/health > /dev/null && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:7860/api/health
+      - name: Reviews travel Agent A -> Agent B over A2A
+        run: |
+          set -e
+          B=http://127.0.0.1:7860
+          test "$(curl -s -o /dev/null -w '%{http_code}' $B/api/samples)" = 401   # password enforced
+          TOKEN=$(curl -sf -X POST -H 'Content-Type: application/json' -d '{"password":"ci-password"}' $B/api/auth/login | jq -r .token)
+          check() {
+            got=$(curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+              --data @backend/samples/json/$1.json $B/api/reviews | jq -r '.verification_result + " " + .recommended_action')
+            echo "$1 -> $got"
+            test "$got" = "$2"
+          }
+          check matching "MATCH ROUTE_TO_APPROVER"
+          check quantity_total_mismatch "DISCREPANCY_FOUND HOLD_AND_QUERY_SUPPLIER"
+          check missing_information "NEEDS_REVIEW REQUEST_MISSING_INFORMATION"
+          check invalid_request "INVALID_REQUEST CORRECT_AND_RESUBMIT"
+          code=$(curl -s -o /tmp/x.json -w '%{http_code}' -H "Authorization: Bearer $TOKEN" \
+            -F "file=@backend/samples/pdfs/matching_invoice.pdf;type=application/pdf" $B/api/documents/extract)
+          test "$code" = 200 && test "$(jq -r .data.invoice_number /tmp/x.json)" = INV-1001
+          echo "PDF extraction OK"
+      - name: Container logs
+        if: always()
+        run: docker logs nexusai 2>&1 | tail -60
+
+  deploy-hf:
+    name: Deploy to Hugging Face Space
+    needs: docker
+    # Set repository variable HF_SPACE (e.g. BaranikumarNagarajan/NexusAI) and secret HF_TOKEN to enable.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.HF_SPACE != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Push the app to the Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ vars.HF_SPACE }}
+        run: |
+          set -e
+          rm -rf .git .github
+          # A Space reads its settings from the README's front matter.
+          {
+            printf -- '---\ntitle: NexusAI\nemoji: "🧾"\ncolorFrom: indigo\ncolorTo: purple\nsdk: docker\napp_port: 7860\n'
+            printf -- 'pinned: false\nlicense: mit\nshort_description: A2A-powered invoice verification\n---\n\n'
+            cat README.md
+          } > README.space && mv README.space README.md
+          git init -q -b main
+          git lfs install --local
+          git lfs track "*.pdf" "*.png" "*.gif" "*.jpg"   # the Hub stores binary files with LFS
+          git add -A
+          git -c user.name="github-actions" -c user.email="actions@github.com" commit -q -m "Deploy ${GITHUB_SHA::7}"
+          git push --force "https://user:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}" main

@@ -26,7 +26,10 @@ flowchart LR
 | [`.dockerignore`](../.dockerignore) | Keeps `.env`, `.venv`, `.git`, docs and downloaded Kaggle images out of the image |
 
 - **Port:** the API listens on `$PORT` — Render sets it; `7860` otherwise.
-- **Size / memory:** image ~530 MB; ~220 MB RAM idle, ~250 MB during OCR (fits free 512 MB plans).
+- **Size / memory:** image ~530 MB; ~210 MB RAM idle, ~420 MB peak with three Kaggle refreshes and
+  background OCR together (measured under a 512 MB limit). OCR runs one job at a time at low CPU
+  priority, and `MALLOC_ARENA_MAX=2` stops per-thread memory pools — without these a 512 MB plan
+  ran out of memory and restarted (seen on Render as HTTP 502).
 - **OCR speed on small CPUs:** Render's free plan has a fraction of one CPU. Tesseract runs with
   one thread (`OMP_THREAD_LIMIT=1`, ~4× faster there: 63 s → 17 s a page), and orientation
   detection only runs when a page reads as noise (sideways photos). Expect ~15–30 s per scanned
@@ -72,7 +75,8 @@ Render waits for both checks; a failed check stops the deployment, so a broken c
 1. Render dashboard → **New → Web Service** → connect the GitHub repo `NexusAI`.
 2. **Language:** Docker · **Branch:** `main` · **Instance type:** Free.
 3. **Environment variables:** the table above.
-4. **Advanced → Health check path:** `/api/health`.
+4. **Advanced → Health check path:** `/api/live` (instant; `/api/health` also checks both agents
+   and Supabase and can be slow while OCR is busy, which made Render restart a healthy app).
 5. **Advanced → Auto-Deploy:** *After CI checks pass*.
 6. Create. The app is at `https://<service-name>.onrender.com`.
 

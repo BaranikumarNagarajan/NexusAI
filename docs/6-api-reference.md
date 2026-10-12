@@ -15,6 +15,7 @@ Interactive docs: **<http://127.0.0.1:8080/docs>** (every endpoint can be tried 
 | Method & path | Purpose | Responses |
 |---|---|---|
 | `GET /api/health` | API, both agents, Supabase, OCR and AI status; `auth_required` | `200` (`ok` / `degraded`) — always public |
+| `GET /api/live` | Liveness for the hosting health check: answers at once, checks nothing else | `200` — always public |
 | `POST /api/auth/login` | `{password}` → `{token, expires_in}` | `200` · `401` wrong · `404` no password set · `429` too many tries |
 | `GET /api/auth/status` | Is a password needed, and is this token valid? | `200` — always public |
 | `GET /api/agents` | Both Agent Cards, discovered live | `200` |

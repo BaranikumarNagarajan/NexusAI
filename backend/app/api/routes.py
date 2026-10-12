@@ -122,6 +122,13 @@ def _summary(row: dict[str, Any]) -> dict[str, Any]:
 # --- Status -------------------------------------------------------------------------------
 
 
+@router.get("/live", tags=["status"], summary="Liveness: answers at once, without checking agents or storage")
+async def live() -> dict[str, str]:
+    """For the hosting platform's health check (Render: Health Check Path = /api/live). It stays fast
+    even while OCR keeps a small CPU busy, so the platform doesn't restart a healthy app."""
+    return {"status": "ok"}
+
+
 @router.get("/health", response_model=Health, tags=["status"], summary="Health of the API, agents and storage")
 async def health(request: Request) -> Health:
     agents = {a["role"]: a for a in await _gateway(request).agent_cards()}

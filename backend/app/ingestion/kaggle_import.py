@@ -13,6 +13,7 @@ import io
 import json
 import logging
 import os
+import queue
 import random
 import re
 import shutil
@@ -285,12 +286,28 @@ def cached_extraction(key: str, filename: str) -> dict:
         return result
 
 
+_queue: queue.Queue[tuple[str, str]] = queue.Queue()
+_worker: threading.Thread | None = None
+
+
 def read_ahead(key: str, filenames: list[str]) -> None:
-    """Read a fresh set in a background thread, one invoice at a time."""
-    def run() -> None:
-        for name in filenames:
-            try:
-                cached_extraction(key, name)
-            except Exception as exc:  # a bad image must not stop the others
-                logger.warning("Read-ahead OCR failed for %s/%s: %s", key, name, type(exc).__name__)
-    threading.Thread(target=run, name=f"read-ahead-{key}", daemon=True).start()
+    """Queue a fresh set for background OCR. One worker reads one invoice at a time, so several
+    refreshes in a row never run OCR in parallel (a small hosting CPU would stall the web app)."""
+    global _worker
+    for name in filenames:
+        _queue.put((key, name))
+    with _locks_guard:
+        if _worker is None or not _worker.is_alive():
+            _worker = threading.Thread(target=_read_ahead_worker, name="read-ahead", daemon=True)
+            _worker.start()
+
+
+def _read_ahead_worker() -> None:
+    while True:
+        key, name = _queue.get()
+        if not (folder(key) / name).is_file():
+            continue  # replaced by a newer refresh before its turn came
+        try:
+            cached_extraction(key, name)
+        except Exception as exc:  # a bad image must not stop the others
+            logger.warning("Read-ahead OCR failed for %s/%s: %s", key, name, type(exc).__name__)

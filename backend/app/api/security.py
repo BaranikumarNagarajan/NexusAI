@@ -23,7 +23,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 
 # Paths that never need a token.
-PUBLIC_PATHS = {"/api/health", "/api/auth/login", "/api/auth/status"}
+PUBLIC_PATHS = {"/api/health", "/api/live", "/api/auth/login", "/api/auth/status"}
 
 
 @dataclass(frozen=True)

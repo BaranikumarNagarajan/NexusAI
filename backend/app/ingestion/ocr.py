@@ -10,6 +10,7 @@ import io
 import os
 import shutil
 import subprocess
+import threading
 from functools import lru_cache
 
 import pypdfium2 as pdfium
@@ -35,6 +36,14 @@ class OCRError(Exception):
     pass
 
 
+# OCR runs at low CPU priority (Linux / Docker), so web requests and health checks stay responsive
+# on a small hosting CPU while invoices are read.
+_LOW_PRIORITY = ["nice", "-n", "10"] if os.name == "posix" and shutil.which("nice") else []
+# One OCR job at a time per process (background read-ahead, uploads): OCR is the memory-hungry step,
+# and two at once can push a 512 MB hosting plan over its limit.
+_ONE_AT_A_TIME = threading.Lock()
+
+
 @lru_cache(maxsize=1)
 def find_tesseract() -> str | None:
     for candidate in (os.getenv("TESSERACT_CMD"), shutil.which("tesseract"), *_STANDARD_PATHS):
@@ -53,13 +62,13 @@ def _best_angle(image: Image.Image) -> int:
     more reliable than Tesseract's own orientation detection, which misses dense tables.)"""
     probe = image.copy()
     probe.thumbnail((PROBE_SIZE, PROBE_SIZE))
-    scores = {}
+    scores: dict[int, float] = {}
     for angle in (0, 90, 180, 270):
         turned = ImageOps.autocontrast(probe.rotate(angle, expand=True))
         buffer = io.BytesIO()
         turned.save(buffer, format="PNG")
         scores[angle] = _confidence(_tesseract(buffer.getvalue())[1])
-    best = max(scores, key=scores.get)
+    best = max(scores, key=lambda angle: scores[angle])
     return best if scores[best] >= scores[0] + MIN_ANGLE_GAIN else 0
 
 
@@ -81,7 +90,7 @@ def _tesseract(png: bytes, page: int = 0) -> tuple[str, list[dict]]:
         raise OCRError("OCR is not available: install Tesseract or set TESSERACT_CMD in backend/.env.")
     try:
         done = subprocess.run(
-            [exe, "stdin", "stdout", "-l", "eng", "--psm", "6", "tsv"],
+            [*_LOW_PRIORITY, exe, "stdin", "stdout", "-l", "eng", "--psm", "6", "tsv"],
             input=png, capture_output=True, timeout=OCR_TIMEOUT_SECONDS, check=False,
         )
     except subprocess.TimeoutExpired as exc:
@@ -120,6 +129,16 @@ def _read_page(image: Image.Image, page: int) -> tuple[str, list[dict]]:
 
 
 def ocr_image(data: bytes) -> tuple[str, int, list[dict]]:
+    with _ONE_AT_A_TIME:
+        return _ocr_image(data)
+
+
+def ocr_pdf(data: bytes) -> tuple[str, int, list[dict]]:
+    with _ONE_AT_A_TIME:
+        return _ocr_pdf(data)
+
+
+def _ocr_image(data: bytes) -> tuple[str, int, list[dict]]:
     try:
         image = Image.open(io.BytesIO(data))
         frames = []
@@ -134,7 +153,7 @@ def ocr_image(data: bytes) -> tuple[str, int, list[dict]]:
     return "\n".join(t for t, _ in results), len(frames), [w for _, ws in results for w in ws]
 
 
-def ocr_pdf(data: bytes) -> tuple[str, int, list[dict]]:
+def _ocr_pdf(data: bytes) -> tuple[str, int, list[dict]]:
     try:
         pdf = pdfium.PdfDocument(data)
         # scale is pixels per PDF point (72 per inch); pypdfium2 accepts a float, its type hint says int.

@@ -1,0 +1,13 @@
+# Runtime
+a2a-sdk[http-server]==1.2.2   # official A2A Python SDK (Starlette-based server routes)
+uvicorn==0.54.0               # ASGI server used to run the A2A Starlette app
+httpx==0.28.1                 # HTTP client used by the A2A client
+pydantic==2.14.1              # request validation (also an a2a-sdk dependency)
+python-dotenv==1.2.1          # optional .env loading for local configuration
+supabase==2.32.0              # Supabase client for review persistence (server-side only)
+fastapi==0.143.0              # HTTP API gateway for the frontend (python -m app.api)
+python-multipart==0.0.32      # file uploads in FastAPI (PDF ingestion)
+pdfplumber==0.11.10           # text + table extraction from PDFs
+fpdf2==2.8.9                  # synthetic sample PDF generation (scripts/generate_sample_pdfs.py)
+pypdfium2==5.14.0             # render PDF pages for OCR (also used by pdfplumber)
+pillow==12.3.0                # image preparation for OCR

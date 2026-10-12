@@ -1,0 +1,6 @@
+# Store text with LF line endings (needed for Docker / Linux builds); binaries untouched.
+* text=auto eol=lf
+*.pdf binary
+*.png binary
+*.gif binary
+*.jpg binary

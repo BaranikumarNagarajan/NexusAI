@@ -1,0 +1,22 @@
+{
+  "invoice": {
+    "invoice_number": "INV-1003",
+    "supplier_name": "Globex Industrial Parts",
+    "currency": "USD",
+    "po_reference": "PO-7003",
+    "line_items": [
+      {"sku": "BOLT-M8", "quantity": "500", "unit_price": "1.20", "line_total": "600.00"}
+    ],
+    "tax_amount": "0.00",
+    "total_amount": "600.00"
+  },
+  "purchase_order": {
+    "po_number": "PO-7003",
+    "supplier_name": "Globex Industrial Parts",
+    "currency": "EUR",
+    "line_items": [
+      {"sku": "BOLT-M8", "quantity": "500", "unit_price": "1.20"}
+    ],
+    "total_amount": "600.00"
+  }
+}

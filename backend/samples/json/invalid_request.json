@@ -1,0 +1,14 @@
+{
+  "invoice": {
+    "invoice_number": "INV-1006",
+    "supplier_name": "Acme Office Supplies Ltd",
+    "currency": "POUNDS",
+    "line_items": [
+      {"sku": "PAPER-A4", "quantity": "-3", "unit_price": "25.00"}
+    ],
+    "total_amount": "lots"
+  },
+  "purchase_order": {
+    "po_number": "PO-5006"
+  }
+}

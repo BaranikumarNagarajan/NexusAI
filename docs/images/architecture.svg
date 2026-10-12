@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 430" font-family="Segoe UI, Inter, Helvetica, Arial, sans-serif" role="img" aria-label="NexusAI architecture: one review travelling through the system">
+  <title>NexusAI architecture</title>
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#1e1b4b" flood-opacity=".12"/></filter>
+    <style>
+      .zone { fill: #f5f6fb; stroke: #dfe2ee; stroke-dasharray: 5 5; }
+      .zl { font-size: 11px; font-weight: 700; letter-spacing: .08em; fill: #8a90a8; }
+      .box { fill: #fff; stroke: #c7cbe0; stroke-width: 1.5; filter: url(#shadow); }
+      .t { font-size: 15px; font-weight: 700; fill: #1f2340; }
+      .s { font-size: 11.5px; fill: #6b7190; }
+      .route { fill: none; stroke: #c9cde0; stroke-width: 2; stroke-dasharray: 6 6; animation: dash 1.4s linear infinite; }
+      .cap { font-size: 14px; font-weight: 650; fill: #3b3f63; }
+      @keyframes dash { to { stroke-dashoffset: -24; } }
+    </style>
+  </defs>
+  <rect width="980" height="430" rx="18" fill="#ffffff"/>
+
+  <!-- zones -->
+  <rect class="zone" x="16" y="140" width="180" height="120" rx="14"/><text class="zl" x="28" y="160">WEB</text>
+  <rect class="zone" x="216" y="140" width="190" height="120" rx="14"/><text class="zl" x="228" y="160">FASTAPI GATEWAY</text>
+  <rect class="zone" x="430" y="16" width="534" height="124" rx="14"/><text class="zl" x="442" y="36">TWO AGENTS · A2A PROTOCOL (JSON-RPC)</text>
+  <rect class="zone" x="430" y="262" width="534" height="124" rx="14"/><text class="zl" x="442" y="282">DATA &amp; AI</text>
+
+  <!-- routes -->
+  <path class="route" d="M180 200 H232"/>
+  <path class="route" d="M392 200 C420 200 420 92 448 92"/>
+  <path class="route" d="M628 80 H770"/>
+  <path class="route" d="M860 120 V302"/>
+  <path class="route" d="M770 104 H628"/>
+  <path class="route" d="M520 120 V302"/>
+  <path class="route" d="M560 302 V120"/>
+  <path class="route" d="M448 108 C410 108 420 216 392 216 H180"/>
+
+  <!-- nodes -->
+  <g><rect class="box" x="30" y="170" width="150" height="60" rx="12"/><text class="t" x="105" y="196" text-anchor="middle">Web app</text><text class="s" x="105" y="214" text-anchor="middle">HTML · CSS · JS · Chart.js</text></g>
+  <g><rect class="box" x="232" y="170" width="160" height="60" rx="12"/><text class="t" x="312" y="196" text-anchor="middle">NexusAI API</text><text class="s" x="312" y="214" text-anchor="middle">PDF + OCR extraction</text></g>
+  <g><rect x="448" y="52" width="180" height="68" rx="12" fill="url(#brand)" filter="url(#shadow)"/><text class="t" x="538" y="80" text-anchor="middle" fill="#fff" style="fill:#fff">Agent A</text><text class="s" x="538" y="99" text-anchor="middle" style="fill:#e0e7ff">Procurement Coordinator</text></g>
+  <g><rect x="770" y="52" width="180" height="68" rx="12" fill="#0f766e" filter="url(#shadow)"/><text class="t" x="860" y="80" text-anchor="middle" style="fill:#fff">Agent B</text><text class="s" x="860" y="99" text-anchor="middle" style="fill:#ccfbf1">Invoice Verification Specialist</text></g>
+  <g><rect class="box" x="448" y="302" width="180" height="64" rx="12"/><text class="t" x="538" y="329" text-anchor="middle">AI model</text><text class="s" x="538" y="347" text-anchor="middle">Ollama Cloud · gpt-oss:120b</text></g>
+  <g><rect class="box" x="770" y="302" width="180" height="64" rx="12"/><text class="t" x="860" y="329" text-anchor="middle">Supabase</text><text class="s" x="860" y="347" text-anchor="middle">PostgreSQL · audit trail</text></g>
+
+  <!-- moving messages: 12 s loop, one leg after another -->
+  <g>
+    <circle r="7" fill="#6366f1" opacity="0"><animateMotion dur="12s" repeatCount="indefinite" path="M180 200 H232" keyPoints="0;0;1;1" keyTimes="0;0.02;0.10;1" calcMode="linear"/><animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.02;0.025;0.10;0.105;1"/></circle>
+    <circle r="7" fill="#6366f1" opacity="0"><animateMotion dur="12s" repeatCount="indefinite" path="M392 200 C420 200 420 92 448 92" keyPoints="0;0;1;1" keyTimes="0;0.12;0.22;1" calcMode="linear"/><animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.12;0.125;0.22;0.225;1"/></circle>
+    <circle r="7" fill="#6366f1" opacity="0"><animateMotion dur="12s" repeatCount="indefinite" path="M628 80 H770" keyPoints="0;0;1;1" keyTimes="0;0.24;0.34;1" calcMode="linear"/><animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.24;0.245;0.34;0.345;1"/></circle>
+    <circle r="7" fill="#10b981" opacity="0"><animateMotion dur="12s" repeatCount="indefinite" path="M860 120 V302" keyPoints="0;0;1;1" keyTimes="0;0.36;0.45;1" calcMode="linear"/><animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.36;0.365;0.45;0.455;1"/></circle>
+    <circle r="7" fill="#10b981" opacity="0"><animateMotion dur="12s" repeatCount="indefinite" path="M770 104 H628" keyPoints="0;0;1;1" keyTimes="0;0.47;0.56;1" calcMode="linear"/><animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.47;0.475;0.56;0.565;1"/></circle>
+    <circle r="7" fill="#8b5cf6" opacity="0"><animateMotion dur="12s" repeatCount="indefinite" path="M520 120 V302" keyPoints="0;0;1;1" keyTimes="0;0.58;0.66;1" calcMode="linear"/><animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.58;0.585;0.66;0.665;1"/></circle>
+    <circle r="7" fill="#8b5cf6" opacity="0"><animateMotion dur="12s" repeatCount="indefinite" path="M560 302 V120" keyPoints="0;0;1;1" keyTimes="0;0.70;0.78;1" calcMode="linear"/><animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.70;0.705;0.78;0.785;1"/></circle>
+    <circle r="7" fill="#10b981" opacity="0"><animateMotion dur="12s" repeatCount="indefinite" path="M448 108 C410 108 420 216 392 216 H180" keyPoints="0;0;1;1" keyTimes="0;0.80;0.94;1" calcMode="linear"/><animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.80;0.805;0.94;0.945;1"/></circle>
+  </g>
+
+  <!-- captions, synced with the dots -->
+  <g text-anchor="middle">
+    <text class="cap" x="490" y="414" opacity="0">1 · You upload an invoice and its purchase order<animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.02;0.03;0.11;0.12;1"/></text>
+    <text class="cap" x="490" y="414" opacity="0">2 · The API reads the documents and sends clean data to Agent A<animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.12;0.13;0.23;0.24;1"/></text>
+    <text class="cap" x="490" y="414" opacity="0">3 · Agent A finds Agent B by its Agent Card and delegates over A2A<animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.24;0.25;0.35;0.36;1"/></text>
+    <text class="cap" x="490" y="414" opacity="0">4 · Agent B checks every rule with exact decimals and saves the result<animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.36;0.37;0.46;0.47;1"/></text>
+    <text class="cap" x="490" y="414" opacity="0">5 · Agent B returns the verdict to Agent A<animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.47;0.48;0.57;0.58;1"/></text>
+    <text class="cap" x="490" y="414" opacity="0">6 · Agent A sends only verified facts to the AI model<animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.58;0.59;0.69;0.70;1"/></text>
+    <text class="cap" x="490" y="414" opacity="0">7 · The AI explains it; every figure is fact-checked<animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.70;0.71;0.79;0.80;1"/></text>
+    <text class="cap" x="490" y="414" opacity="0">8 · The report and dashboard update. A person makes the payment decision<animate attributeName="opacity" dur="12s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.80;0.81;0.97;0.98;1"/></text>
+  </g>
+</svg>

@@ -1,0 +1,24 @@
+{
+  "invoice": {
+    "invoice_number": "INV-1001",
+    "supplier_name": "Acme Office Supplies Ltd",
+    "currency": "GBP",
+    "po_reference": "PO-5001",
+    "line_items": [
+      {"sku": "PAPER-A4", "description": "A4 copier paper, 5 reams", "quantity": "10", "unit_price": "25.00", "line_total": "250.00"},
+      {"sku": "PEN-BLK", "description": "Black ballpoint pens, box of 50", "quantity": "5", "unit_price": "22.50", "line_total": "112.50"}
+    ],
+    "tax_amount": "72.50",
+    "total_amount": "435.00"
+  },
+  "purchase_order": {
+    "po_number": "PO-5001",
+    "supplier_name": "ACME Office Supplies Ltd.",
+    "currency": "GBP",
+    "line_items": [
+      {"sku": "PAPER-A4", "quantity": "10", "unit_price": "25.00"},
+      {"sku": "PEN-BLK", "quantity": "5", "unit_price": "22.50"}
+    ],
+    "total_amount": "435.00"
+  }
+}

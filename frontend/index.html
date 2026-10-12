@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NexusAI · Invoice Intelligence</title>
+  <meta name="description" content="A2A-powered invoice verification and procurement review.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234f46e5'/%3E%3Cpath d='M9 22V10l14 12V10' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="vendor/chart.umd.min.js" defer></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+<div class="shell">
+  <!-- ============ sidebar ============ -->
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="#/overview" aria-label="NexusAI overview">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="9"/><path d="M9 22V10l14 12V10"/></svg></span>
+      <span class="brand-text"><strong>NexusAI</strong><small>Invoice intelligence</small></span>
+    </a>
+
+    <nav class="nav" aria-label="Main">
+      <p class="nav-label">Workspace</p>
+      <a href="#/overview" data-route="overview">
+        <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/></svg>Overview</a>
+      <a href="#/review" data-route="review">
+        <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15h6"/></svg>New review</a>
+      <a href="#/history" data-route="history">
+        <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 3"/></svg>History</a>
+      <p class="nav-label">Platform</p>
+      <a href="#/how" data-route="how">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z"/></svg>How it works</a>
+      <a href="#/system" data-route="system">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 7h.01M7 17h.01"/></svg>Agents &amp; system</a>
+      <a href="/docs" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M10 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4M14 4h6v6M10 14 20 4"/></svg>API docs</a>
+    </nav>
+
+    <div class="side-status" id="side-status" aria-label="System status">
+      <p class="nav-label">System</p>
+      <ul>
+        <li data-svc="coordinator"><span class="dot"></span>Agent A</li>
+        <li data-svc="verifier"><span class="dot"></span>Agent B</li>
+        <li data-svc="storage"><span class="dot"></span>Supabase</li>
+        <li data-svc="ocr"><span class="dot"></span>OCR</li>
+        <li data-svc="reasoning"><span class="dot"></span>AI reasoning</li>
+      </ul>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+
+  <!-- ============ main ============ -->
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menu-btn" type="button" aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="page-title">
+        <p class="crumb" id="crumb">NexusAI</p>
+        <h1 id="page-title">Overview</h1>
+      </div>
+      <div class="top-actions">
+        <span class="health-pill" id="health-pill">Checking…</span>
+        <a class="btn primary small" href="#/review" id="top-new">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New review</a>
+        <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle dark mode" title="Toggle theme">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- ============ OVERVIEW ============ -->
+      <section class="view" data-view="overview" aria-labelledby="page-title">
+        <div class="view-head">
+          <div>
+            <h2>Procurement review overview</h2>
+            <p class="muted">Live from Supabase · every review verified by Agent B and coordinated by Agent A over A2A.</p>
+          </div>
+          <div class="segmented" id="range" role="group" aria-label="Date range">
+            <button type="button" data-days="7">7d</button>
+            <button type="button" data-days="14" class="active">14d</button>
+            <button type="button" data-days="30">30d</button>
+          </div>
+        </div>
+
+        <div class="kpis" id="kpis"></div>
+
+        <div class="grid g-3-2">
+          <article class="card latest-card" id="latest-card">
+            <header class="card-head">
+              <div><h3>Latest review</h3><p class="muted">Most recent result with Agent A's reasoning</p></div>
+              <a class="btn ghost small" href="#/review">Run a new review</a>
+            </header>
+            <div id="latest"></div>
+          </article>
+          <article class="card">
+            <header class="card-head"><div><h3>Risk &amp; next actions</h3><p class="muted">From Agent A's recommendations</p></div></header>
+            <div id="risk-actions"></div>
+          </article>
+        </div>
+
+        <div class="grid g-3-1">
+          <article class="card chart-card">
+            <header class="card-head"><div><h3>Review volume</h3><p class="muted">Reviews per day by outcome</p></div></header>
+            <div class="chart-box tall"><canvas id="chart-volume" aria-label="Reviews per day"></canvas></div>
+          </article>
+          <article class="card chart-card">
+            <header class="card-head"><div><h3>Outcome mix</h3><p class="muted">All saved reviews</p></div></header>
+            <div class="chart-box donut"><canvas id="chart-outcomes" aria-label="Outcome distribution"></canvas>
+              <div class="donut-center" id="donut-center"></div></div>
+            <ul class="legend-list" id="outcome-legend"></ul>
+          </article>
+        </div>
+
+        <div class="grid g-1-1">
+          <article class="card chart-card">
+            <header class="card-head"><div><h3>Top issues</h3><p class="muted">Checks that most often fail or lack data</p></div></header>
+            <div class="chart-box"><canvas id="chart-issues" aria-label="Top issues"></canvas></div>
+          </article>
+          <article class="card">
+            <header class="card-head"><div><h3>Supplier health</h3><p class="muted">Share of reviews that matched</p></div></header>
+            <div id="suppliers" class="supplier-list"></div>
+          </article>
+        </div>
+
+        <div class="grid g-3-2">
+          <article class="card">
+            <header class="card-head">
+              <div><h3>Recent reviews</h3><p class="muted">Latest saved results</p></div>
+              <a class="btn ghost small" href="#/history">View all</a>
+            </header>
+            <div class="table-wrap flat"><table class="table" id="recent-table">
+              <thead><tr><th>Invoice</th><th>Supplier</th><th class="num">Total</th><th>Result</th><th>When</th></tr></thead>
+              <tbody></tbody></table></div>
+          </article>
+          <article class="card pipeline-card">
+            <header class="card-head"><div><h3>Agent pipeline</h3><p class="muted">How a review travels</p></div></header>
+            <ol class="pipeline" id="pipeline">
+              <li data-node="api"><span class="p-icon">API</span><div><strong>NexusAI API</strong><small>FastAPI gateway · OCR intake</small></div></li>
+              <li data-node="coordinator"><span class="p-icon">A</span><div><strong>Agent A · Coordinator</strong><small data-field="sub">Discovers B via Agent Card</small></div></li>
+              <li data-node="verifier"><span class="p-icon">B</span><div><strong>Agent B · Verifier</strong><small data-field="sub">Deterministic checks</small></div></li>
+              <li data-node="storage"><span class="p-icon">DB</span><div><strong>Supabase</strong><small>verification_reviews</small></div></li>
+            </ol>
+          </article>
+        </div>
+      </section>
+
+      <!-- ============ NEW REVIEW ============ -->
+      <section class="view" data-view="review" hidden>
+        <div class="view-head">
+          <div>
+            <h2>New review</h2>
+            <p class="muted">Pick an invoice, check what was read from it, and let both agents verify it.</p>
+          </div>
+          <ol class="wizard" aria-label="Steps">
+            <li class="active"><span>1</span>Choose documents</li>
+            <li><span>2</span>Check data</li>
+            <li><span>3</span>Results</li>
+          </ol>
+        </div>
+
+        <!-- step 1: sources -->
+        <article class="card step-card" aria-labelledby="step1-title">
+          <header class="step-head">
+            <span class="step-no">1</span>
+            <div>
+              <h3 id="step1-title">Choose documents</h3>
+              <p class="muted">Start from a ready-made scenario or a real scanned invoice.</p>
+            </div>
+            <div class="segmented" id="source-tabs" role="tablist" aria-label="Document source">
+              <button type="button" role="tab" data-source="demo" class="active">Demo set <span class="count" id="demo-count"></span></button>
+              <button type="button" role="tab" data-source="kaggle">Real invoices · Kaggle <span class="count" id="kaggle-count"></span></button>
+            </div>
+          </header>
+
+          <div class="source-pane" data-pane="demo">
+            <p class="pane-note">Synthetic invoice + purchase-order PDF pairs, one per scenario. Fictional companies.</p>
+            <div class="demo-grid" id="demo-grid"></div>
+          </div>
+          <div class="source-pane" data-pane="kaggle" hidden>
+            <div class="dataset-chips" id="kaggle-datasets" role="radiogroup" aria-label="Kaggle dataset"></div>
+            <div class="kaggle-bar">
+              <label class="check"><input type="checkbox" id="auto-po" checked> Auto-create a demo PO (real invoices have none)</label>
+              <div class="kaggle-fetch">
+                <select id="kaggle-fetch-count" aria-label="How many invoices per set"><option value="3">3</option><option value="6" selected>6</option><option value="12">12</option></select>
+                <button type="button" class="btn ghost small" id="kaggle-fetch" title="Load a fresh random set from the next dataset">↻ Refresh</button>
+              </div>
+            </div>
+            <div class="kaggle-grid" id="kaggle-grid"></div>
+            <p class="attribution" id="kaggle-attribution"></p>
+          </div>
+
+          <details class="advanced" id="advanced">
+            <summary>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+              <span><strong>Advanced options</strong><small>Upload your own PDF or image · JSON scenarios</small></span>
+              <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <div class="advanced-body">
+              <h4 class="sub-title">Upload your own documents</h4>
+              <p class="pane-note">Digital PDFs are read as text; scanned PDFs and PNG / JPEG / TIFF images are read with Tesseract OCR. Max 5 MB each.</p>
+              <div class="dropzones">
+                <div class="dropzone" data-doc="invoice" tabindex="0" role="button" aria-label="Upload invoice document">
+                  <input type="file" accept="application/pdf,.pdf,image/png,image/jpeg,image/tiff,.png,.jpg,.jpeg,.tif,.tiff" hidden>
+                  <svg class="dz-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg>
+                  <div class="dz-text"><strong>Invoice</strong><span class="dz-status">Drop a PDF or image, or click to browse</span></div>
+                  <div class="dz-actions" hidden>
+                    <button type="button" class="link-btn" data-action="view">Preview</button>
+                    <button type="button" class="link-btn danger" data-action="remove">Remove</button>
+                  </div>
+                </div>
+                <div class="dropzone" data-doc="purchase_order" tabindex="0" role="button" aria-label="Upload purchase order document">
+                  <input type="file" accept="application/pdf,.pdf,image/png,image/jpeg,image/tiff,.png,.jpg,.jpeg,.tif,.tiff" hidden>
+                  <svg class="dz-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg>
+                  <div class="dz-text"><strong>Purchase order</strong><span class="dz-status">Drop a PDF or image, or click to browse</span></div>
+                  <div class="dz-actions" hidden>
+                    <button type="button" class="link-btn" data-action="view">Preview</button>
+                    <button type="button" class="link-btn danger" data-action="remove">Remove</button>
+                  </div>
+                </div>
+              </div>
+              <h4 class="sub-title">JSON scenarios</h4>
+              <p class="pane-note">Fill the form instantly from a test case (no documents involved).</p>
+              <div class="samples" id="samples" aria-label="Quick-fill scenarios"></div>
+            </div>
+          </details>
+        </article>
+
+        <!-- step 2: data -->
+        <article class="card step-card" aria-labelledby="step2-title">
+          <header class="step-head">
+            <span class="step-no">2</span>
+            <div>
+              <h3 id="step2-title">Check the data</h3>
+              <p class="muted">Invoice and purchase order side by side. Edit anything before running.</p>
+            </div>
+            <div class="tabs" role="tablist" aria-label="Input mode">
+              <button type="button" role="tab" id="tab-form" aria-selected="true" data-tab="form">Form</button>
+              <button type="button" role="tab" id="tab-json" aria-selected="false" data-tab="json">JSON</button>
+            </div>
+          </header>
+
+          <div class="loaded-docs" id="loaded-docs" hidden></div>
+          <div id="extract-summary" class="extract-summary" hidden></div>
+          <div id="pdf-preview" class="pdf-preview" hidden>
+            <div class="preview-head"><span id="preview-title">Preview</span>
+              <button type="button" class="link-btn" id="preview-close">Close</button></div>
+            <iframe title="Document preview" id="preview-frame"></iframe>
+          </div>
+
+          <form id="review-form" novalidate>
+            <div id="form-pane" class="compare-docs">
+              <fieldset class="doc">
+                <legend><span class="doc-tag inv">INV</span>Invoice</legend>
+                <div class="fields">
+                  <label>Invoice number<input name="invoice.invoice_number" autocomplete="off" placeholder="INV-1001"></label>
+                  <label>Supplier<input name="invoice.supplier_name" autocomplete="off" placeholder="Acme Office Supplies Ltd"></label>
+                  <label>Currency<input name="invoice.currency" autocomplete="off" maxlength="3" placeholder="GBP"></label>
+                  <label>PO reference<input name="invoice.po_reference" autocomplete="off" placeholder="PO-5001"></label>
+                  <label>Tax amount<input name="invoice.tax_amount" inputmode="decimal" placeholder="72.50"></label>
+                  <label>Total amount<input name="invoice.total_amount" inputmode="decimal" placeholder="435.00"></label>
+                </div>
+                <div class="lines" data-side="invoice">
+                  <div class="lines-head"><span>Line items</span>
+                    <button type="button" class="link-btn" data-add-line="invoice">+ Add line</button></div>
+                  <div class="line-grid line-grid-invoice line-labels" aria-hidden="true">
+                    <span>SKU</span><span>Description</span><span>Qty</span><span>Unit price</span><span>Line total</span><span></span></div>
+                  <div class="line-rows"></div>
+                </div>
+              </fieldset>
+              <fieldset class="doc">
+                <legend><span class="doc-tag po">PO</span>Purchase order</legend>
+                <div class="demo-po" id="demo-po-bar">
+                  <span>No purchase order? Real-world invoices (e.g. Kaggle) come without one.</span>
+                  <button type="button" class="btn ghost small" id="demo-po">Create demo PO from invoice</button>
+                </div>
+                <div class="fields">
+                  <label>PO number<input name="purchase_order.po_number" autocomplete="off" placeholder="PO-5001"></label>
+                  <label>Supplier<input name="purchase_order.supplier_name" autocomplete="off" placeholder="Acme Office Supplies Ltd"></label>
+                  <label>Currency<input name="purchase_order.currency" autocomplete="off" maxlength="3" placeholder="GBP"></label>
+                  <label>Total amount<input name="purchase_order.total_amount" inputmode="decimal" placeholder="435.00"></label>
+                </div>
+                <div class="lines" data-side="purchase_order">
+                  <div class="lines-head"><span>Line items</span>
+                    <button type="button" class="link-btn" data-add-line="purchase_order">+ Add line</button></div>
+                  <div class="line-grid line-grid-po line-labels" aria-hidden="true">
+                    <span>SKU</span><span>Qty</span><span>Unit price</span><span></span></div>
+                  <div class="line-rows"></div>
+                </div>
+              </fieldset>
+            </div>
+            <div id="json-pane" hidden>
+              <label class="json-label" for="json-input">Request body sent to <code>POST /api/reviews</code></label>
+              <textarea id="json-input" spellcheck="false" rows="22"></textarea>
+              <p id="json-error" class="field-error" role="alert"></p>
+            </div>
+            <div class="run-bar">
+              <p class="muted">Agent A coordinates · Agent B verifies over A2A · the AI model explains the result.</p>
+              <div class="actions">
+                <button type="button" class="btn ghost" id="reset-btn">Clear</button>
+                <button type="submit" class="btn primary" id="submit-btn"><span class="btn-label">Run review</span></button>
+              </div>
+            </div>
+          </form>
+        </article>
+
+        <!-- step 3: results -->
+        <article class="card result" id="result" aria-live="polite"></article>
+      </section>
+
+      <!-- ============ HISTORY ============ -->
+      <section class="view" data-view="history" hidden>
+        <article class="card">
+          <div class="toolbar">
+            <div class="search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input id="history-search" type="search" placeholder="Filter this page by invoice, supplier or summary" aria-label="Filter reviews">
+            </div>
+            <div class="chips" id="history-filter" role="group" aria-label="Filter by result">
+              <button type="button" class="chip selected" data-status="">All</button>
+              <button type="button" class="chip" data-status="MATCH"><span class="dot ok"></span>Match</button>
+              <button type="button" class="chip" data-status="DISCREPANCY_FOUND"><span class="dot bad"></span>Discrepancy</button>
+              <button type="button" class="chip" data-status="NEEDS_REVIEW"><span class="dot warn"></span>Needs review</button>
+              <button type="button" class="chip" data-status="INVALID_REQUEST"><span class="dot neutral"></span>Invalid</button>
+            </div>
+            <button type="button" class="btn ghost small" id="history-refresh">Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="history-table">
+              <thead><tr><th>Created</th><th>Invoice</th><th>Supplier</th><th class="num">Total</th><th>Result</th><th>Summary</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="pager">
+            <span id="history-meta" class="muted">Loading…</span>
+            <div class="pager-btns">
+              <button type="button" class="btn ghost small" id="prev-page">← Newer</button>
+              <span id="page-info" class="muted"></span>
+              <button type="button" class="btn ghost small" id="next-page">Older →</button>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- ============ HOW IT WORKS ============ -->
+      <section class="view" data-view="how" hidden>
+        <div class="view-head">
+          <div>
+            <h2>How NexusAI works</h2>
+            <p class="muted">Follow one invoice through the system. Click any stage, or let it play.</p>
+          </div>
+          <div class="player" role="group" aria-label="Walkthrough controls">
+            <button type="button" class="icon-btn" id="how-prev" aria-label="Previous step"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <button type="button" class="icon-btn play" id="how-play" aria-label="Pause"></button>
+            <button type="button" class="icon-btn" id="how-next" aria-label="Next step"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+            <span class="muted" id="how-count"></span>
+            <div class="segmented speed" role="radiogroup" aria-label="Animation speed">
+              <button type="button" role="radio" data-pace="2" aria-checked="true" class="active">Slow</button>
+              <button type="button" role="radio" data-pace="1" aria-checked="false">Normal</button>
+            </div>
+          </div>
+        </div>
+
+        <article class="card stage-card">
+          <div class="stage" id="how-stage"></div>
+          <div class="how-progress" aria-hidden="true"><span id="how-progress"></span></div>
+          <p class="stage-legend"><span class="s-dot ok"></span>Live status of each service right now</p>
+        </article>
+
+        <article class="card explain-card" id="how-explain" aria-live="polite"></article>
+
+        <article class="card map-card">
+          <header class="card-head">
+            <div><h3>System map</h3><p class="muted">The full round trip of one review, on a loop. Each moving dot is a message between two parts of the system.</p></div>
+            <ul class="map-legend">
+              <li><i style="background:var(--brand)"></i>Request</li>
+              <li><i style="background:#10b981"></i>Result</li>
+              <li><i style="background:var(--brand-2)"></i>AI explanation</li>
+            </ul>
+          </header>
+          <div id="how-map" class="map-wrap"></div>
+        </article>
+
+        <div class="principles">
+          <article class="card principle">
+            <span class="p-badge brand">1</span>
+            <h3>Rules decide, AI explains</h3>
+            <p>The verdict comes from a deterministic rule engine. The AI model only puts that verdict into plain words, so the same invoice always gets the same answer.</p>
+          </article>
+          <article class="card principle">
+            <span class="p-badge info">2</span>
+            <h3>Agents speak an open standard</h3>
+            <p>Agent A and Agent B are separate services that discover each other and talk over A2A. A new specialist agent could be added without rewriting the others.</p>
+          </article>
+          <article class="card principle">
+            <span class="p-badge ok">3</span>
+            <h3>Checked, never trusted blindly</h3>
+            <p>The AI only sees verified facts, and every figure it writes is fact-checked. Nothing in NexusAI can approve a payment; a person always decides.</p>
+          </article>
+        </div>
+
+        <article class="card">
+          <header class="card-head"><div><h3>The four possible outcomes</h3><p class="muted">What Agent B can conclude, and what Agent A recommends next</p></div>
+            <a class="btn primary small" href="#/review">Try a review</a></header>
+          <div class="outcomes">
+            <div class="outcome ok"><span class="badge ok">Match</span><p>Invoice agrees with the PO on every check.</p><b>→ Route to an authorised approver</b><small>Low risk</small></div>
+            <div class="outcome bad"><span class="badge bad">Discrepancy found</span><p>A price, quantity, supplier, currency or total differs.</p><b>→ Hold and query the supplier</b><small>High risk</small></div>
+            <div class="outcome warn"><span class="badge warn">Needs review</span><p>Information needed for a check is missing.</p><b>→ Request the missing information</b><small>Medium risk</small></div>
+            <div class="outcome neutral"><span class="badge">Invalid request</span><p>Values are malformed and cannot be checked.</p><b>→ Correct and resubmit</b><small>Medium risk</small></div>
+          </div>
+        </article>
+      </section>
+
+      <!-- ============ SYSTEM ============ -->
+      <section class="view" data-view="system" hidden>
+        <div class="view-head">
+          <div><h2>Agents &amp; system</h2>
+            <p class="muted">Who does what, and whether it is running right now. NexusAI is two AI agents that work as a team,
+              plus the services they rely on. Everything on this page is read live, not hard-coded.</p></div>
+          <button type="button" class="btn ghost small" id="system-refresh">Refresh</button>
+        </div>
+        <div class="flow" id="flow"></div>
+        <div class="grid g-1-1" id="agent-cards"></div>
+        <div class="services" id="services"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>NexusAI provides procurement guidance only and never approves invoices for payment. An authorised person makes every payment decision.</p>
+      <p>Synthetic demo data · <a href="/docs" target="_blank" rel="noopener">API docs</a></p>
+    </footer>
+  </div>
+</div>
+
+<aside class="drawer" id="drawer" aria-labelledby="drawer-title" aria-hidden="true">
+  <header class="drawer-head">
+    <h2 id="drawer-title">Saved review</h2>
+    <button type="button" class="icon-btn" id="drawer-close" aria-label="Close">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </header>
+  <div class="drawer-body" id="drawer-body"></div>
+</aside>
+<div class="drawer-scrim" id="drawer-scrim" hidden></div>
+<div id="toasts" class="toasts" aria-live="assertive"></div>
+</body>
+</html>

@@ -25,7 +25,7 @@ Code: [`frontend/`](../frontend/)
 | **New review** | ① choose documents (demo PDF pairs, four Kaggle datasets, or your own upload under *Advanced options*) → ② check the data (invoice and PO side by side, colour-marked) → ③ the analysis report |
 | **History** | Every saved review, with filters, search, paging and a detail drawer |
 | **How it works** | Animated 7-step walkthrough (Slow / Normal speed for presenting) and a looping system map |
-| **Agents & system** | Both live Agent Cards and the status of every service, explained in plain English |
+| **Agents & system** | What NexusAI is made of, in plain English: the two agents (*its job · it never · think of it as*), the four services (*what it is · why we need it · right now*), a glossary, and live status; technical Agent Card details fold out |
 
 ## The analysis report
 
@@ -39,8 +39,8 @@ Code: [`frontend/`](../frontend/)
 
 ## Design and safety
 
-- Light and dark themes (follows the system, with a toggle); works down to phone width; respects
-  reduced motion.
+- **Dark mode by default**; the top-bar button switches to light and the choice is remembered.
+  Works down to phone width; respects reduced motion.
 - All data is inserted as text, never as HTML; the page talks only to the NexusAI API.
 - When the backend has an access password, a sign-in screen appears first; the token is kept in
   this browser for 12 hours, and the top-bar button signs out.

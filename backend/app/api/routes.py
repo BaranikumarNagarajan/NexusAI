@@ -34,7 +34,16 @@ from app.api.schemas import (
     SamplePdf,
 )
 from app.api.security import request_token
-from app.ingestion.kaggle_import import DATASETS, MAX_PER_CALL, KaggleError, folder, load_manifest, refresh
+from app.ingestion.kaggle_import import (
+    DATASETS,
+    MAX_PER_CALL,
+    KaggleError,
+    cached_extraction,
+    folder,
+    load_manifest,
+    read_ahead,
+    refresh,
+)
 from app.ingestion.ocr import ocr_status
 from app.ingestion.pdf_extract import ExtractionError, detect_kind, extract_document
 from app.persistence.reviews import STATUSES, PersistenceError, ReviewRepository
@@ -255,7 +264,22 @@ async def refresh_kaggle(dataset: _DATASET_KEY = "hq",
         status = 400 if "Set KAGGLE" in str(exc) or "Unknown dataset" in str(exc) else 502
         raise HTTPException(status, str(exc)) from exc
     logger.info("Loaded %d invoices from Kaggle dataset %s", result["added"], dataset)
+    read_ahead(dataset, result["files"])  # OCR them in the background so clicking a card is quick
     return result
+
+
+@router.get("/samples/kaggle/{dataset}/{filename}/extract", response_model=DocumentExtraction, tags=["samples"],
+            summary="OCR result for one downloaded Kaggle invoice (read ahead in the background)",
+            responses={404: {"model": ErrorResponse}, 422: {"model": ErrorResponse}})
+async def kaggle_extraction(dataset: Annotated[str, PathParam(pattern=r"^[a-z]+$")],
+                            filename: Annotated[str, PathParam(pattern=r"^[\w.-]+\.(jpg|jpeg|png)$")]) -> DocumentExtraction:
+    if dataset not in DATASETS or filename not in {f["file"] for f in _kaggle_files(dataset)}:
+        raise HTTPException(404, f"Unknown Kaggle sample '{filename}'.")
+    try:
+        result = await run_in_threadpool(cached_extraction, dataset, filename)
+    except ExtractionError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return DocumentExtraction(**result)
 
 
 @router.get("/samples/kaggle/{dataset}/{filename}", tags=["samples"], summary="One imported Kaggle invoice image",

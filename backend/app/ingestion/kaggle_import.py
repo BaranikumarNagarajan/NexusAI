@@ -11,10 +11,12 @@ labels) and the dataset's licence and attribution.
 import csv
 import io
 import json
+import logging
 import os
 import random
 import re
 import shutil
+import threading
 import urllib.parse
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -23,6 +25,8 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 API = "https://www.kaggle.com/api/v1"
 OUT = Path(__file__).resolve().parents[2] / "samples" / "kaggle"
@@ -61,7 +65,9 @@ DATASETS: dict[str, Dataset] = {d.key: d for d in [
             "Synthetic scans · varied layouts", "Thousands of generated invoices with different layouts and scan noise.",
             "CC BY 4.0", '"Synthetic Invoice OCR Dataset" by nowshinaranini on Kaggle, CC BY 4.0.', False),
     Dataset("grocery", "surajitsadhukhan/indian-grocery-tax-invoice-image-dataset", "Indian Grocery Tax Invoices",
-            "Phone photos · real", "Real shop receipts photographed with a phone: the hardest test for OCR.",
+            "Phone photos · often handwritten",
+            "Real shop bills photographed with a phone. Many are handwritten or creased, which OCR cannot read: "
+            "type the key values in yourself, or run them as is to see Agent B report the missing information.",
             "CC BY 4.0", '"Indian Grocery Tax Invoice Image Dataset" by surajitsadhukhan on Kaggle, CC BY 4.0.', False),
 ]}
 DEFAULT_DATASET = "hq"
@@ -237,6 +243,7 @@ def refresh(key: str = DEFAULT_DATASET, count: int = 6) -> dict:
     # Swap the new set in: remove the previous images, drop the "new-" prefix.
     for old in previous["files"]:
         (out / old["file"]).unlink(missing_ok=True)
+        _cache_path(key, old["file"]).unlink(missing_ok=True)
     for entry in added:
         final = entry["file"].removeprefix("new-")
         shutil.move(out / entry["file"], out / final)
@@ -248,3 +255,42 @@ def refresh(key: str = DEFAULT_DATASET, count: int = 6) -> dict:
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return {"dataset": key, "title": ds.title, "added": len(added), "files": [a["file"] for a in added],
             "license": ds.license, "attribution": ds.attribution}
+
+
+# --- OCR results, read ahead ---------------------------------------------------------------------
+# OCR is the slow part (seconds locally, 10-30 s on a small hosting CPU). After a refresh every new
+# invoice is read in the background and the result saved next to the image, so clicking a card is
+# usually instant. A per-file lock makes a click wait for a reading already in progress, not repeat it.
+
+_locks: dict[Path, threading.Lock] = {}
+_locks_guard = threading.Lock()
+
+
+def _cache_path(key: str, filename: str) -> Path:
+    return folder(key) / f"{filename}.extract.json"
+
+
+def cached_extraction(key: str, filename: str) -> dict:
+    """The extraction (same shape as POST /api/documents/extract) for one downloaded invoice."""
+    from app.ingestion.pdf_extract import extract_document  # imported lazily: OCR stack is heavy
+
+    path = _cache_path(key, filename)
+    with _locks_guard:
+        lock = _locks.setdefault(path, threading.Lock())
+    with lock:
+        if path.is_file():
+            return json.loads(path.read_text(encoding="utf-8"))
+        result = {"filename": filename, **extract_document((folder(key) / filename).read_bytes(), "invoice").to_dict()}
+        path.write_text(json.dumps(result), encoding="utf-8")
+        return result
+
+
+def read_ahead(key: str, filenames: list[str]) -> None:
+    """Read a fresh set in a background thread, one invoice at a time."""
+    def run() -> None:
+        for name in filenames:
+            try:
+                cached_extraction(key, name)
+            except Exception as exc:  # a bad image must not stop the others
+                logger.warning("Read-ahead OCR failed for %s/%s: %s", key, name, type(exc).__name__)
+    threading.Thread(target=run, name=f"read-ahead-{key}", daemon=True).start()

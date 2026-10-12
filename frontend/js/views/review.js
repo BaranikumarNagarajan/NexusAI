@@ -199,7 +199,8 @@ function renderExtractionSummary() {
   box.hidden = false;
 }
 
-async function handleFile(doc, file) {
+/** Read a document into the form. `extractPath`: a ready-made OCR result (Kaggle samples are read ahead). */
+async function handleFile(doc, file, { extractPath } = {}) {
   if (!file) return;
   const okType = /\.(pdf|png|jpe?g|tiff?)$/i.test(file.name || "") || /^(application\/pdf|image\/(png|jpeg|tiff))$/.test(file.type);
   if (!okType) { setZone(doc, "error", "Please choose a PDF, PNG, JPEG or TIFF file."); return; }
@@ -209,10 +210,15 @@ async function handleFile(doc, file) {
   setZone(doc, "busy", scan
     ? `Reading ${file.name} with OCR… a few seconds locally; on the free online server ~20–30 s for a scan, up to 2–3 min for a phone photo.`
     : `Reading ${file.name}… (scanned PDFs use OCR and take longer)`);
-  const form = new FormData();
-  form.append("file", file, file.name);
-  form.append("expected_type", doc);
-  const res = await api("/api/documents/extract", { method: "POST", body: form });
+  let res;
+  if (extractPath) {
+    res = await api(extractPath);
+  } else {
+    const form = new FormData();
+    form.append("file", file, file.name);
+    form.append("expected_type", doc);
+    res = await api("/api/documents/extract", { method: "POST", body: form });
+  }
   if (!res.ok) { setZone(doc, "error", detailOf(res)); return; }
 
   const extraction = res.data;
@@ -291,10 +297,17 @@ async function loadKaggle(file, card) {
   payload.purchase_order = {};
   fillForm(payload);
   const type = file.file.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
-  try { await handleFile("invoice", await fetchAsFile(file.url, type)); }
+  try { await handleFile("invoice", await fetchAsFile(file.url, type), { extractPath: `${file.url}/extract` }); }
   catch { setZone("invoice", "error", "Could not download the Kaggle invoice."); return; }
-  if ($("#auto-po").checked && docs.invoice) createDemoPO();
+  if (!docs.invoice) return;
+  const inv = readForm().invoice || {};
+  const unreadable = !inv.invoice_number && !(inv.line_items || []).length;
+  if ($("#auto-po").checked) createDemoPO({ force: true, quiet: unreadable });
   else toast("Real invoice read with OCR. It has no purchase order: use \u201cCreate demo PO from invoice\u201d.");
+  if (unreadable) {
+    toast("OCR could not read this photo (handwritten or low quality). Open Preview and type the invoice number, "
+      + "total and lines into the form, or run it as is: Agent B will report the missing information.", "error");
+  }
 }
 
 function renderDemoGrid(samples, expected = {}) {
@@ -373,7 +386,8 @@ async function selectDataset(key) {
   kaggleDataset = key;
   try { localStorage.setItem(DATASET_KEY, key); } catch { /* not remembered */ }
   renderDatasetChips();
-  if (!(await refreshKaggle())) await loadNewSet(key); // nothing cached for this dataset yet
+  // Nothing downloaded for this dataset yet (and no download already running): fetch a set.
+  if (!(await refreshKaggle()) && !$("#kaggle-fetch").disabled) await loadNewSet(key);
 }
 
 /** Download a fresh random set from one dataset (replaces its previous set). */
@@ -427,10 +441,10 @@ async function loadSampleDocs() {
 }
 
 /** Kaggle-style invoices have no PO: build a matching demo PO from the invoice (marked as edited). */
-function createDemoPO() {
+function createDemoPO({ force = false, quiet = false } = {}) {
   const payload = readForm();
   const inv = payload.invoice || {};
-  if (!inv.invoice_number && !(inv.line_items || []).length) { toast("Load or enter an invoice first.", "error"); return; }
+  if (!force && !inv.invoice_number && !(inv.line_items || []).length) { toast("Load or enter an invoice first.", "error"); return; }
   const hadReference = Boolean(inv.po_reference);
   const poNumber = inv.po_reference || `PO-DEMO-${inv.invoice_number || "1"}`;
   payload.purchase_order = {
@@ -447,7 +461,7 @@ function createDemoPO() {
   const ref = $('[name="invoice.po_reference"]');
   if (!hadReference) { ref.dataset.confidence = "edited"; ref.title = "Demo PO reference added by you"; }
   $("#json-input").value = JSON.stringify(readForm(), null, 2);
-  toast("Demo PO created from the invoice. Change a quantity or price to see the agents catch it.");
+  if (!quiet) toast("Demo PO created from the invoice. Change a quantity or price to see the agents catch it.");
   setWizard(2);
 }
 
@@ -528,7 +542,7 @@ export function initReview(options) {
     $('[data-action="remove"]', el).addEventListener("click", () => removeDoc(doc));
   }
   $("#preview-close").addEventListener("click", closePreview);
-  $("#demo-po").addEventListener("click", createDemoPO);
+  $("#demo-po").addEventListener("click", () => createDemoPO());
   $("#form-pane").addEventListener("input", (e) => {
     if (e.target.matches("input[data-confidence]")) e.target.dataset.confidence = "edited";
   });

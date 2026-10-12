@@ -2,12 +2,12 @@
 
 Tesseract is found via TESSERACT_CMD, then PATH, then the standard Windows install
 folders. Images are normalised (grayscale, upscaled, auto-contrast) before OCR; a page that reads
-as noise is turned upright with orientation detection and read again. PDF pages are rendered at ~300 dpi with pypdfium2. No network calls.
+as noise is turned the right way up (a quick read at each quarter turn) and read again. PDF pages
+are rendered at ~300 dpi with pypdfium2. No network calls.
 """
 
 import io
 import os
-import re
 import shutil
 import subprocess
 from functools import lru_cache
@@ -20,9 +20,10 @@ OCR_TIMEOUT_SECONDS = 90
 # Measured: 2600 px reads 41/41 real Kaggle line items and 98/98 synthetic fields
 # (1800 px: 40/41, misread '37,75' as '37,15'; sharpening cost 2 synthetic fields).
 TARGET_WIDTH = 2600
-MIN_OSD_CONFIDENCE = 1.5  # below this Tesseract's orientation guess is unreliable
-# Mean word confidence: upright scans score ~93-95, a sideways photo ~34 (70 once turned upright).
+# Mean word confidence: upright scans score ~93-95, a sideways photo ~23-34 (57-70 once turned upright).
 MIN_UPRIGHT_CONFIDENCE = 60
+PROBE_SIZE = 1200  # small copy used to find the right way up (a quick read, not the real one)
+MIN_ANGLE_GAIN = 10  # a turned copy must read clearly better than the page as it is
 _STANDARD_PATHS = (
     r"C:\Program Files\Tesseract-OCR\tesseract.exe",
     r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
@@ -46,30 +47,20 @@ def ocr_status() -> str:
     return "available" if find_tesseract() else "not_installed"
 
 
-def _orient(image: Image.Image) -> Image.Image:
-    """Turn sideways / upside-down photos upright using Tesseract's orientation detection (OSD).
-    Phone photos of receipts are often taken in landscape; without this OCR reads nothing."""
-    exe = find_tesseract()
-    if exe is None:
-        return image
+def _best_angle(image: Image.Image) -> int:
+    """Find the right way up for a sideways or upside-down photo: read a small copy at each quarter
+    turn and keep the angle whose words Tesseract is most sure of. (Measured on real phone photos:
+    more reliable than Tesseract's own orientation detection, which misses dense tables.)"""
     probe = image.copy()
-    probe.thumbnail((1600, 1600))
-    buffer = io.BytesIO()
-    probe.save(buffer, format="PNG")
-    try:
-        done = subprocess.run([exe, "stdin", "stdout", "--psm", "0"], input=buffer.getvalue(),
-                              capture_output=True, timeout=30, check=False)
-    except subprocess.TimeoutExpired:
-        return image
-    out = done.stdout.decode("utf-8", errors="replace")
-    rotate = re.search(r"Rotate:\s*(\d+)", out)
-    confidence = re.search(r"Orientation confidence:\s*([\d.]+)", out)
-    if done.returncode != 0 or not rotate or not confidence:
-        return image  # too little text to tell (OSD fails); leave the page as it is
-    degrees = int(rotate.group(1))
-    if degrees in (90, 180, 270) and float(confidence.group(1)) >= MIN_OSD_CONFIDENCE:
-        return image.rotate(360 - degrees, expand=True)  # Tesseract reports clockwise, PIL rotates anticlockwise
-    return image
+    probe.thumbnail((PROBE_SIZE, PROBE_SIZE))
+    scores = {}
+    for angle in (0, 90, 180, 270):
+        turned = ImageOps.autocontrast(probe.rotate(angle, expand=True))
+        buffer = io.BytesIO()
+        turned.save(buffer, format="PNG")
+        scores[angle] = _confidence(_tesseract(buffer.getvalue())[1])
+    best = max(scores, key=scores.get)
+    return best if scores[best] >= scores[0] + MIN_ANGLE_GAIN else 0
 
 
 def _prepare(image: Image.Image) -> bytes:
@@ -115,16 +106,16 @@ def _confidence(words: list[dict]) -> float:
 
 
 def _read_page(image: Image.Image, page: int) -> tuple[str, list[dict]]:
-    """OCR a page as it is; only if the result looks like noise, detect the orientation and retry.
+    """OCR a page as it is; only if the result looks like noise, find the right way up and retry.
     Upright scans (the usual case) skip orientation detection, which matters on slow hosting CPUs."""
     image = ImageOps.exif_transpose(image).convert("L")
     text, words = _tesseract(_prepare(image), page)
     if _confidence(words) >= MIN_UPRIGHT_CONFIDENCE:
         return text, words
-    turned = _orient(image)
-    if turned is image:
+    angle = _best_angle(image)
+    if angle == 0:
         return text, words
-    turned_text, turned_words = _tesseract(_prepare(turned), page)
+    turned_text, turned_words = _tesseract(_prepare(image.rotate(angle, expand=True)), page)
     return (turned_text, turned_words) if _confidence(turned_words) > _confidence(words) else (text, words)
 
 

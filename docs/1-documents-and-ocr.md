@@ -49,8 +49,9 @@ OCR (please check), **red** not found, **purple** edited by you.
 
 - **When:** scanned PDFs (no text layer) and PNG / JPEG / TIFF images. Text PDFs are read directly.
 - **Pipeline:** grayscale → upscale to 2600 px → auto-contrast → OCR with word positions. If the
-  page reads as noise (mean word confidence below 60 — typical of a sideways phone photo), it is
-  turned upright with Tesseract's orientation detection and read again; the better reading wins.
+  page reads as noise (mean word confidence below 60 — typical of a sideways phone photo), a small
+  copy is read at each quarter turn, the angle Tesseract is most sure of is kept, and the page is
+  read again (more reliable on real photos than Tesseract's own orientation detection).
 - **Setup:** Tesseract on `PATH`, or `TESSERACT_CMD` in `backend/.env`. In Docker it is
   installed with `apt-get install tesseract-ocr`.
 - **Accuracy:** 195/196 fields on the synthetic set as images; **24/24** invoice numbers and
@@ -75,9 +76,14 @@ dataset chips; **↻ Refresh** moves to the next dataset and loads a fresh rando
 | `hq` | High-Quality Invoice Images for OCR (osamahosamabdellatif) | clean scans, full ground-truth labels | ODbL |
 | `clearocr` | clearOCR Invoice Document AI (from Kozlowski & Weichbroth, Mendeley Data) | scans with model-extracted JSON labels | CC BY 4.0 |
 | `synthetic` | Realistic Synthetic Invoice Scans (nowshinaranini) | thousands of varied layouts and scan noise | CC BY 4.0 |
-| `grocery` | Indian Grocery Tax Invoices (surajitsadhukhan) | real phone photos, the hardest OCR case | CC BY 4.0 |
+| `grocery` | Indian Grocery Tax Invoices (surajitsadhukhan) | real phone photos, often handwritten — the hardest case | CC BY 4.0 |
 
 - Only the chosen files are downloaded (3, 6 or 12 per set). Phone photos are shrunk to 1800 px.
+- **Read ahead:** right after a refresh the server OCRs the new invoices in the background and
+  saves each result next to its image, so clicking a card is usually instant.
+- **Handwritten or creased photos** (common in `grocery`) can't be read by Tesseract. The demo PO is
+  still created and the app says so: type the key values from the preview, or run it as is and
+  Agent B reports the missing information (`NEEDS_REVIEW`).
 - `KAGGLE_API_KEY` stays on the server; no Kaggle CLI is needed.
 - Files go to `backend/samples/kaggle/<dataset>/` (git-ignored) with a `manifest.json`
   (labels, licence, attribution). Each refresh replaces that dataset's previous set.

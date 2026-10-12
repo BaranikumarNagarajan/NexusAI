@@ -90,12 +90,10 @@ function closeDrawer() {
 // ---------------------------------------------------------------- theme + menu
 
 function initTheme() {
-  let saved = null;
-  try { saved = localStorage.getItem("nexusai-theme"); } catch { /* storage blocked */ }
-  if (saved) document.documentElement.dataset.theme = saved;
+  // Dark by default; the top-bar button switches to light and the choice is remembered.
+  // (index.html sets the theme before the page draws, so there is no white flash.)
   $("#theme-toggle").addEventListener("click", () => {
-    const now = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-    const next = now === "dark" ? "light" : "dark";
+    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
     document.documentElement.dataset.theme = next;
     try { localStorage.setItem("nexusai-theme", next); } catch { /* storage blocked */ }
     rethemeOverview();

@@ -382,10 +382,21 @@ async function loadNewSet(key) {
   const title = kaggleDatasets.find((d) => d.key === key)?.title || key;
   button.disabled = true;
   fill(button, h("span", { class: "spinner", "aria-hidden": "true" }), h("span", {}, "Loading from Kaggle\u2026"));
-  const res = await api(`/api/samples/kaggle/refresh?dataset=${key}&count=${$("#kaggle-fetch-count").value}`, { method: "POST" });
+  const url = `/api/samples/kaggle/refresh?dataset=${key}&count=${$("#kaggle-fetch-count").value}`;
+  let res = await api(url, { method: "POST" });
+  // 502/503/504 come from the hosting proxy while the server restarts, redeploys or wakes up: retry once.
+  if ([0, 502, 503, 504].includes(res.status)) {
+    await new Promise((resolve) => setTimeout(resolve, 6000));
+    res = await api(url, { method: "POST" });
+  }
   button.disabled = false;
   fill(button, "\u21bb Refresh");
-  if (!res.ok) { toast(detailOf(res), "error"); return; }
+  if (!res.ok) {
+    toast([0, 502, 503, 504].includes(res.status)
+      ? "The server is restarting or waking up. Please press Refresh again in a minute."
+      : detailOf(res), "error");
+    return;
+  }
   toast(`Loaded ${res.data.added} new invoices from ${title}.`);
   await refreshKaggle();
 }

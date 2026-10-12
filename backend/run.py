@@ -30,7 +30,7 @@ from app.config import load_agent_a_settings, load_agent_b_settings, load_api_se
 
 COLORS = {"agent-b": "\033[36m", "agent-a": "\033[35m", "api": "\033[32m"}
 RESET = "\033[0m"
-READY_TIMEOUT_SECONDS = 30
+READY_TIMEOUT_SECONDS = 120  # slow on small hosting CPUs (imports alone take a while)
 
 
 class Service:
